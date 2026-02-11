@@ -109,7 +109,7 @@
 
       <label>用 roomId 直接加入</label>
       <div class="row">
-        <input id="joinRoomId" class="mono" placeholder="例如：AB12CD" style="flex:1;min-width:220px" autocomplete="off"/>
+        <input id="joinRoomId" class="mono" placeholder="例如：0123" style="flex:1;min-width:220px" autocomplete="off"/>
         <button id="btnJoinRoom" class="secondary">加入</button>
       </div>
 
@@ -168,6 +168,9 @@
           <button id="btnResolve" class="danger" style="display:none">結算（Host）</button>
         </div>
       </div>
+
+      <div style="height:10px"></div>
+      <button id="btnStartRound" class="secondary" style="display:none">開始回合（Host）</button>
 
       <div class="hint bad" id="roomError" style="display:none"></div>
     </div>
@@ -448,7 +451,7 @@
   async function joinRoomById(roomId){
     showErr("lobbyError","");
     const name = must(document.getElementById("playerName").value,"你的名字").slice(0,18);
-    roomId = must(roomId,"roomId").toUpperCase();
+    roomId = must(roomId,"roomId").trim();
 
     setStatus(true,"加入房間…");
     const jr = await apiPOST("joinRoom", { roomId, name });
@@ -481,9 +484,15 @@
     if (!out.ok) throw new Error(out.error || "bid failed");
   }
 
+  async function startRoundHost(){
+    showErr("roomError","");
+    const out = await apiPOST("startRound", { roomId:S.roomId, hostToken:S.hostToken, playerId:S.playerId });
+    if (!out.ok) throw new Error(out.error || "startRound failed");
+  }
+
   async function resolveHost(){
     showErr("roomError","");
-    const out = await apiPOST("resolve", { roomId:S.roomId, hostToken:S.hostToken });
+    const out = await apiPOST("resolve", { roomId:S.roomId, hostToken:S.hostToken, playerId:S.playerId });
     if (!out.ok) throw new Error(out.error || "resolve failed");
   }
 
@@ -560,7 +569,9 @@
         bidBox.style.display="none";
       }
 
-      document.getElementById("btnResolve").style.display = (S.hostToken && room.state==="BIDDING") ? "" : "none";
+      const amHost = !!(S.hostToken || (me && me.isHost));
+      document.getElementById("btnStartRound").style.display = (amHost && room.state==="LOBBY") ? "" : "none";
+      document.getElementById("btnResolve").style.display = (amHost && room.state==="BIDDING") ? "" : "none";
       document.getElementById("btnResetDb").style.display = S.hostToken ? "" : "none";
 
       if (events.length){
@@ -596,6 +607,11 @@
   document.getElementById("btnBid").onclick = async ()=>{
     try { await sendBid(); }
     catch(err){ showErr("roomError", String(err.message||err)); setStatus(false,"出價失敗"); log("BID_ERR:\n"+String(err.message||err)); }
+  };
+
+  document.getElementById("btnStartRound").onclick = async ()=>{
+    try { await startRoundHost(); }
+    catch(err){ showErr("roomError", String(err.message||err)); setStatus(false,"開始回合失敗"); log("START_ROUND_ERR:\n"+String(err.message||err)); }
   };
 
   document.getElementById("btnResolve").onclick = async ()=>{

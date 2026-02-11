@@ -140,7 +140,7 @@ function apiResetDatabase_(body) {
   const roomId = String(body.roomId || "").trim().toUpperCase();
   const hostToken = String(body.hostToken || "").trim();
   if (!roomId) return { ok:false, error:"MISSING_ROOMID" };
-  if (!hostToken) return { ok:false, error:"MISSING_HOSTTOKEN" };
+  if (!hostToken && !playerId) return { ok:false, error:"MISSING_HOST_CREDENTIAL" };
 
   return withLock_(() => {
     const ss = db_();
@@ -183,6 +183,22 @@ function rid_(len) {
   let s = "";
   for (let i = 0; i < len; i++) s += chars[Math.floor(Math.random() * chars.length)];
   return s;
+}
+
+
+function normalizeLobbyCode_(raw) {
+  let s = String(raw || "").trim();
+  if (!s) return "";
+  s = s.replace(/\s+/g, "").replace(/[a-z]/g, c => c.toUpperCase());
+  return s.length >= 2 ? s.slice(0,16) : "";
+}
+
+function newUniqueRoomId_(roomsSheet) {
+  for (let i = 0; i < 50; i++) {
+    const id = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
+    if (findRoomRow_(roomsSheet, id) < 0) return id;
+  }
+  throw new Error("ROOM_ID_POOL_EXHAUSTED");
 }
 
 function withLock_(fn) {
@@ -298,7 +314,7 @@ function apiDebugInfo_() {
  * Game APIs
  ***************/
 function apiCreateRoom_(body) {
-  const lobbyCode = String(body.lobbyCode || "").trim().toUpperCase();
+  const lobbyCode = normalizeLobbyCode_(body.lobbyCode);
   if (!lobbyCode) return { ok:false, error:"MISSING_LOBBYCODE" };
 
   return withLock_(() => {
@@ -306,7 +322,7 @@ function apiCreateRoom_(body) {
     const rooms = ss.getSheetByName(TABS.ROOMS);
     const t = nowMs_();
 
-    const roomId = rid_(6);
+    const roomId = newUniqueRoomId_(rooms);
     const hostToken = rid_(10);
 
     appendRow_(rooms, [
@@ -322,7 +338,7 @@ function apiCreateRoom_(body) {
 }
 
 function apiJoinRoom_(body) {
-  const roomId = String(body.roomId || "").trim().toUpperCase();
+  const roomId = String(body.roomId || "").trim();
   const name = String(body.name || "").trim().slice(0, 18);
   if (!roomId) return { ok:false, error:"MISSING_ROOMID" };
   if (!name) return { ok:false, error:"MISSING_NAME" };
@@ -369,7 +385,7 @@ function apiJoinRoom_(body) {
 }
 
 function apiListLobbyRooms_(p) {
-  const lobbyCode = String(p.lobbyCode || "").trim().toUpperCase();
+  const lobbyCode = normalizeLobbyCode_(p.lobbyCode);
   if (!lobbyCode) return { ok:false, error:"MISSING_LOBBYCODE" };
 
   const ss = db_();
@@ -506,12 +522,13 @@ function apiSync_(p) {
 function apiUpdateSettings_(body) {
   const roomId = String(body.roomId || "").trim().toUpperCase();
   const hostToken = String(body.hostToken || "").trim();
+  const playerId = String(body.playerId || "").trim();
   const startingBudget = Number(body.startingBudget || 100);
   const roundSeconds = Number(body.roundSeconds || 25);
   const maxRounds = Number(body.maxRounds || 8);
 
   if (!roomId) return { ok:false, error:"MISSING_ROOMID" };
-  if (!hostToken) return { ok:false, error:"MISSING_HOSTTOKEN" };
+  if (!hostToken && !playerId) return { ok:false, error:"MISSING_HOST_CREDENTIAL" };
 
   return withLock_(() => {
     const ss = db_();
@@ -524,7 +541,7 @@ function apiUpdateSettings_(body) {
     const im = idxMap_(headers);
     const r = getRow_(rooms, idx, rooms.getLastColumn());
 
-    if (String(r[im.hostToken]) !== hostToken) return { ok:false, error:"HOST_TOKEN_MISMATCH" };
+    if (!canManageRoom_(ss, roomId, hostToken, playerId, r, im)) return { ok:false, error:"HOST_PERMISSION_DENIED" };
 
     const t = nowMs_();
     r[im.startingBudget] = startingBudget;
@@ -541,8 +558,9 @@ function apiUpdateSettings_(body) {
 function apiStartRound_(body) {
   const roomId = String(body.roomId || "").trim().toUpperCase();
   const hostToken = String(body.hostToken || "").trim();
+  const playerId = String(body.playerId || "").trim();
   if (!roomId) return { ok:false, error:"MISSING_ROOMID" };
-  if (!hostToken) return { ok:false, error:"MISSING_HOSTTOKEN" };
+  if (!hostToken && !playerId) return { ok:false, error:"MISSING_HOST_CREDENTIAL" };
 
   return withLock_(() => {
     const ss = db_();
@@ -556,7 +574,7 @@ function apiStartRound_(body) {
     const im = idxMap_(headers);
     const r = getRow_(rooms, idx, rooms.getLastColumn());
 
-    if (String(r[im.hostToken]) !== hostToken) return { ok:false, error:"HOST_TOKEN_MISMATCH" };
+    if (!canManageRoom_(ss, roomId, hostToken, playerId, r, im)) return { ok:false, error:"HOST_PERMISSION_DENIED" };
 
     const round = Number(r[im.round] || 0) + 1;
     const maxRounds = Number(r[im.maxRounds] || 8);
@@ -602,8 +620,9 @@ function apiBid_(body) {
 function apiResolve_(body) {
   const roomId = String(body.roomId || "").trim().toUpperCase();
   const hostToken = String(body.hostToken || "").trim();
+  const playerId = String(body.playerId || "").trim();
   if (!roomId) return { ok:false, error:"MISSING_ROOMID" };
-  if (!hostToken) return { ok:false, error:"MISSING_HOSTTOKEN" };
+  if (!hostToken && !playerId) return { ok:false, error:"MISSING_HOST_CREDENTIAL" };
 
   return withLock_(() => {
     const ss = db_();
@@ -619,7 +638,7 @@ function apiResolve_(body) {
     const rim = idxMap_(headers);
     const r = getRow_(rooms, idx, rooms.getLastColumn());
 
-    if (String(r[rim.hostToken]) !== hostToken) return { ok:false, error:"HOST_TOKEN_MISMATCH" };
+    if (!canManageRoom_(ss, roomId, hostToken, playerId, r, rim)) return { ok:false, error:"HOST_PERMISSION_DENIED" };
     if (String(r[rim.state]) !== "BIDDING") return { ok:false, error:"NOT_IN_BIDDING" };
 
     const round = Number(r[rim.round] || 0);
@@ -735,6 +754,25 @@ function apiPlayCard_(body) {
 /***************
  * Internal helpers
  ***************/
+
+function canManageRoom_(ss, roomId, hostToken, playerId, roomRow, roomIndexMap) {
+  if (hostToken && String(roomRow[roomIndexMap.hostToken]) === hostToken) return true;
+  if (!playerId) return false;
+
+  const players = ss.getSheetByName(TABS.PLAYERS);
+  if (!players) return false;
+
+  const all = readAll_(players);
+  const pim = idxMap_(all.headers);
+  for (const pr of all.rows) {
+    if (String(pr[pim.roomId]) !== roomId) continue;
+    if (String(pr[pim.playerId]) !== playerId) continue;
+    return String(pr[pim.isHost]) === "1";
+  }
+
+  return false;
+}
+
 function findRoomRow_(roomsSheet, roomId) {
   // Rooms 的 roomId 是第 1 欄
   return findRowIndex_(roomsSheet, 0, roomId);
