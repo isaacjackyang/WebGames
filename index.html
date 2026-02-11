@@ -201,8 +201,12 @@
   }
 
   function normalizeLobbyCode(s){
-    s = String(s||"").trim().toUpperCase().replace(/[^A-Z0-9]/g,"");
-    return s.length >= 2 ? s.slice(0,8) : "";
+    s = String(s||"").trim();
+    if (!s) return "";
+    // 允許「房名」使用中文/英文/數字；英文統一轉大寫，移除空白
+    // 避免原本只保留 A-Z0-9 導致輸入中文時變成空字串、看起來像按鈕沒反應。
+    s = s.replace(/\s+/g, "").replace(/[a-z]/g, c => c.toUpperCase());
+    return s.length >= 2 ? s.slice(0,16) : "";
   }
 
   async function apiGET(action, params={}){
@@ -267,7 +271,7 @@
   async function refreshLobby(){
     showErr("lobbyError","");
     const lobbyCode = normalizeLobbyCode(document.getElementById("lobbyCode").value);
-    if (!lobbyCode) { showErr("lobbyError","房名至少 2 碼英數"); return; }
+    if (!lobbyCode) { showErr("lobbyError","房名至少 2 個字（可用中文/英文/數字）"); return; }
     setStatus(true,"載入房間列表…");
     const out = await apiGET("listLobbyRooms", { lobbyCode });
     if (!out.ok) throw new Error(out.error || "listLobbyRooms failed");
@@ -278,6 +282,7 @@
   async function createRoom(){
     showErr("lobbyError","");
     const lobbyCode = normalizeLobbyCode(must(document.getElementById("lobbyCode").value,"房名/同場域代碼"));
+    if (!lobbyCode) throw new Error("房名至少 2 個字（可用中文/英文/數字）");
     const name = must(document.getElementById("playerName").value,"你的名字").slice(0,18);
 
     setStatus(true,"建立房間…");
