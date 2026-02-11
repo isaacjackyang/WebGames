@@ -23,9 +23,9 @@ function doGet(e) {
   if (action) {
     try {
       const out = handleApiGet_(action, params);
-      return jsonOut_(out);
+      return apiOut_(out, params);
     } catch (err) {
-      return jsonOut_({ ok: false, error: String(err && err.message ? err.message : err) });
+      return apiOut_({ ok: false, error: String(err && err.message ? err.message : err) }, params);
     }
   }
 
@@ -114,6 +114,17 @@ function jsonOut_(obj) {
   return ContentService
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function apiOut_(obj, params) {
+  const callback = String((params && params.callback) || "").trim();
+  // 提供 JSONP，讓跨網域靜態頁也能呼叫 Apps Script API（避免 fetch/CORS NetworkError）
+  if (callback && /^[A-Za-z_$][A-Za-z0-9_$\.]{0,63}$/.test(callback)) {
+    return ContentService
+      .createTextOutput(callback + "(" + JSON.stringify(obj) + ");")
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return jsonOut_(obj);
 }
 
 function nowMs_() { return Date.now(); }
