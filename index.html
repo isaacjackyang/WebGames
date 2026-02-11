@@ -6,34 +6,69 @@
   <title>Blind Auction Party</title>
   <style>
     :root{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans TC",Arial,sans-serif}
-    body{margin:0;background:#0b0f14;color:#e6edf3}
-    header{padding:14px 16px;border-bottom:1px solid #1f2a37;display:flex;justify-content:space-between;gap:12px;align-items:center}
-    .small{color:#9fb0c2;font-size:12px}
+    body{
+      margin:0;
+      color:#fff2e0;
+      min-height:100vh;
+      background:radial-gradient(circle at 20% 10%,#ffb4a2 0%,#cf1020 38%,#8d0010 100%);
+      position:relative;
+      overflow-x:hidden;
+    }
+    body::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      background:
+        radial-gradient(circle at 12% 80%,rgba(255,220,127,.2) 0 18%,transparent 25%),
+        radial-gradient(circle at 90% 24%,rgba(255,220,127,.2) 0 16%,transparent 26%),
+        radial-gradient(circle at 50% 4%,rgba(255,245,192,.12) 0 14%,transparent 22%);
+      z-index:0;
+    }
+    header{padding:14px 16px;border-bottom:1px solid #ffd27d66;display:flex;justify-content:space-between;gap:12px;align-items:center;background:#7b0012cc;position:sticky;top:0;z-index:3;backdrop-filter:blur(4px)}
+    .small{color:#ffe7c4;font-size:12px}
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
     main{padding:16px;max-width:980px;margin:0 auto}
     .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-    .card{background:#0f1621;border:1px solid #1f2a37;border-radius:12px;padding:14px}
+    .card{background:linear-gradient(155deg,#a40016 0%,#8e0012 45%,#73000d 100%);border:1px solid #ffd27d8c;border-radius:12px;padding:14px;box-shadow:0 8px 18px #4f000b66;position:relative;z-index:2}
     h3{margin:0 0 10px}
-    label{display:block;font-size:12px;color:#9fb0c2;margin:10px 0 6px}
-    input{background:#0b1220;color:#e6edf3;border:1px solid #223043;border-radius:10px;padding:10px 12px;outline:none}
-    input:focus{border-color:#3b82f6}
-    button{background:#1d4ed8;color:#fff;border:none;border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:800}
-    button.secondary{background:#334155}
-    button.danger{background:#b91c1c}
+    label{display:block;font-size:12px;color:#ffe2b8;margin:10px 0 6px}
+    input{background:#65000f;color:#fff2e0;border:1px solid #ffcc7790;border-radius:10px;padding:10px 12px;outline:none}
+    input:focus{border-color:#ffe29f;box-shadow:0 0 0 2px #ffe29f36}
+    button{background:linear-gradient(180deg,#ffcb59,#f8a400);color:#7a0009;border:none;border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:900}
+    button.secondary{background:linear-gradient(180deg,#ff9f6a,#ff6f45);color:#61000d}
+    button.danger{background:linear-gradient(180deg,#ff7b6e,#ff3232);color:#4b0008}
     button:disabled{opacity:.55;cursor:not-allowed}
-    .status{padding:10px 12px;border-radius:10px;background:#0b1220;border:1px solid #223043}
-    .ok{color:#86efac}.bad{color:#fca5a5}
-    .hint{color:#9fb0c2;font-size:12px;margin-top:6px;white-space:pre-wrap}
+    .status{padding:10px 12px;border-radius:10px;background:#7f0011;border:1px solid #ffd27d99;position:relative;z-index:2}
+    .ok{color:#c7ffbe}.bad{color:#ffe1e1}
+    .hint{color:#ffe7c4;font-size:12px;margin-top:6px;white-space:pre-wrap}
     .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     @media (max-width:860px){.grid2{grid-template-columns:1fr}}
     table{width:100%;border-collapse:collapse}
-    th,td{border-bottom:1px solid #1f2a37;padding:8px 6px;font-size:13px;text-align:left}
-    th{color:#9fb0c2;font-weight:800}
-    .log{max-height:260px;overflow:auto;font-size:12px;background:#0b1220;border:1px solid #223043;border-radius:10px;padding:10px;white-space:pre-wrap}
-    .pill{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;border:1px solid #223043;background:#0b1220;color:#cbd5e1}
+    th,td{border-bottom:1px solid #ffd27d55;padding:8px 6px;font-size:13px;text-align:left}
+    th{color:#ffe7c4;font-weight:800}
+    .log{max-height:260px;overflow:auto;font-size:12px;background:#65000f;border:1px solid #ffd27d66;border-radius:10px;padding:10px;white-space:pre-wrap}
+    .pill{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;border:1px solid #ffd27d88;background:#740010;color:#ffe2b8}
+
+    .festive-layer{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+    .floaty{position:absolute;font-size:34px;filter:drop-shadow(0 4px 6px rgba(65,0,0,.5));animation:sway var(--dur) ease-in-out infinite;transform-origin:center top;opacity:.9}
+    .floaty.small{font-size:28px;opacity:.82}
+    @keyframes sway{
+      0%,100%{transform:translateY(0) rotate(-8deg)}
+      50%{transform:translateY(12px) rotate(8deg)}
+    }
   </style>
 </head>
 <body>
+<div class="festive-layer" aria-hidden="true">
+  <span class="floaty" style="left:4%;top:12%;--dur:2.8s">🧧</span>
+  <span class="floaty small" style="left:14%;top:62%;--dur:2.4s">🪙</span>
+  <span class="floaty" style="left:24%;top:22%;--dur:3.2s">🧧</span>
+  <span class="floaty small" style="left:82%;top:18%;--dur:2.2s">🪙</span>
+  <span class="floaty" style="left:91%;top:58%;--dur:3.1s">🧧</span>
+  <span class="floaty small" style="left:72%;top:74%;--dur:2.7s">🏮</span>
+  <span class="floaty" style="left:46%;top:8%;--dur:3.4s">💰</span>
+</div>
 <header>
   <div>
     <div style="font-weight:900">Blind Auction Party</div>
@@ -151,7 +186,11 @@
   // ===== API URL: prefer /exec, remove query/hash =====
   function computeApiUrl(){
     const u = new URL(window.location.href);
+    const byQuery = (u.searchParams.get("api") || "").trim();
+    if (byQuery) return byQuery;
+
     u.hash = "";
+    u.searchParams.delete("api");
     const path = u.pathname.endsWith("/dev") ? u.pathname.replace(/\/dev$/,"/exec") : u.pathname;
     return u.origin + path;
   }
@@ -231,7 +270,12 @@
       body: JSON.stringify({ action, ...payload })
     });
     const text = await res.text();
-    if (looksLikeHtml(text)) throw new Error("API 回傳 HTML（權限/登入導向/部署設定）。前 200 字：\n" + text.slice(0,200));
+    if (looksLikeHtml(text)){
+      // Apps Script 可能在 POST 時被 302 轉址，導致 body 遺失並回傳 HTML。
+      // 遇到此情況自動改走 GET + query payload。
+      log("POST_FALLBACK_GET action=" + action);
+      return apiGET(action, payload);
+    }
     try { return JSON.parse(text); }
     catch(_) { throw new Error("API 回傳非 JSON。前 200 字：\n" + text.slice(0,200)); }
   }
