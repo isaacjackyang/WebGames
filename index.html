@@ -229,8 +229,9 @@
   }
 
   function looksLikeHtml(t){
-    t = String(t||"").trim();
-    return t.startsWith("<!DOCTYPE") || t.startsWith("<html") || t.includes("<head") || t.includes("<body");
+    const raw = String(t||"").trim();
+    const s = raw.toLowerCase();
+    return s.startsWith("<!doctype") || s.startsWith("<html") || s.includes("<head") || s.includes("<body") || s.includes("iframe#userhtmlframe");
   }
 
   function must(s, name){
