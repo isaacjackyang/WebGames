@@ -1,6 +1,15 @@
 /***********************
  * Blind Auction Party - Minimal Party Server (Google Sheet DB)
- * Code.gs (V3.2-fixed)
+ *
+ * 這份檔案負責：
+ * 1) 以 Google Spreadsheet 當資料庫（Rooms / Players / Events / Items / PlayerCards）
+ * 2) 以 Apps Script doGet/doPost 當 API
+ * 3) 控管回合（開局、出價、結算）
+ *
+ * 設計原則：
+ * - API 永遠回傳 JSON（避免前端 parse 例外）
+ * - 重要寫入動作放在 withLock_ 內，降低競態風險
+ * - 事件流（Events）作為增量同步來源
  ***********************/
 
 const DB_SPREADSHEET_ID = "1IDUnxLtOWoPOS_ya_FMU3B5yMtjqUWe-NBA4dz9mPCk"; // 你的 DB 表 ID
@@ -19,7 +28,7 @@ function doGet(e) {
   const params = e && e.parameter ? e.parameter : {};
   const action = (params.action || "").trim();
 
-  // GET API
+  // GET API：有 action 就視為 API 呼叫，無 action 則回傳 HTML 頁面
   if (action) {
     try {
       const out = handleApiGet_(action, params);
@@ -45,7 +54,7 @@ function doPost(e) {
     try {
       payload = body ? JSON.parse(body) : {};
     } catch (_) {
-      // 這裡硬回 JSON，避免前端 JSON.parse 爆掉
+      // body 不是 JSON 時仍回標準 JSON，避免前端 JSON.parse 爆掉
       return jsonOut_({ ok: false, error: "POST_BODY_NOT_JSON", bodyPreview: String(body).slice(0, 200) });
     }
 
@@ -110,6 +119,7 @@ function rid_(len) {
 }
 
 function withLock_(fn) {
+  // ScriptLock 可避免兩個請求同時寫入造成資料覆蓋（例如同時結算/同時加入）
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
   try { return fn(); } finally { lock.releaseLock(); }
@@ -119,6 +129,7 @@ function ensureSheet_(ss, name, headers) {
   let sh = ss.getSheetByName(name);
   if (!sh) sh = ss.insertSheet(name);
   const a1 = sh.getRange(1, 1, 1, headers.length).getValues()[0];
+  // 僅在第一列為空時灌入標頭，不覆蓋既有資料
   const empty = a1.every(v => String(v || "").trim() === "");
   if (empty) sh.getRange(1, 1, 1, headers.length).setValues([headers]);
   return sh;
@@ -192,7 +203,7 @@ function apiSetup_() {
       "roomId","playerId","cardId","name","desc","count"
     ]);
 
-    // seed items if empty
+    // 首次初始化時，若 Items 沒資料則塞入預設道具
     const items = ss.getSheetByName(TABS.ITEMS);
     if (items.getLastRow() < 2) {
       const seed = [
@@ -256,7 +267,7 @@ function apiJoinRoom_(body) {
     if (roomRowIndex < 0) return { ok:false, error:"ROOM_NOT_FOUND" };
 
     const t = nowMs_();
-    // count players in this room
+    // 計算房內玩家數，用來判斷第一位加入者是否為 host
     const { headers, rows } = readAll_(players);
     const im = idxMap_(headers);
     let count = 0;
@@ -267,7 +278,7 @@ function apiJoinRoom_(body) {
     const roomHeaders = rooms.getRange(1,1,1,rooms.getLastColumn()).getValues()[0];
     const rim = idxMap_(roomHeaders);
 
-    const isHost = (count === 0); // 第一個加入的人視為 host（配合 createRoom 後立刻 join）
+    const isHost = (count === 0); // 第一個加入的人視為 host（createRoom 後通常會立刻 join）
     const startingBudget = Number(roomRow[rim.startingBudget] || 100);
 
     appendRow_(players, [
@@ -348,7 +359,7 @@ function apiSync_(p) {
   const rim = idxMap_(roomHeaders);
   const rr = getRow_(rooms, roomRowIndex, rooms.getLastColumn());
 
-  // build room obj
+  // 產出房間快照（前端每次輪詢依此更新畫面）
   let item = null;
   const itemId = String(rr[rim.itemId] || "");
   if (itemId) {
@@ -368,7 +379,7 @@ function apiSync_(p) {
     item
   };
 
-  // players list
+  // 玩家列表
   const pAll = readAll_(players);
   const pim = idxMap_(pAll.headers);
   const plist = [];
@@ -384,7 +395,7 @@ function apiSync_(p) {
     });
   });
 
-  // my cards
+  // 我的卡片（僅回傳呼叫者 playerId 對應卡片）
   const cAll = readAll_(cards);
   const cim = idxMap_(cAll.headers);
   const myCards = [];
@@ -399,7 +410,7 @@ function apiSync_(p) {
     });
   });
 
-  // events incremental
+  // 增量事件：只回 sinceEventId 之後的事件
   const eAll = readAll_(events);
   const eim = idxMap_(eAll.headers);
   const evs = [];
@@ -486,6 +497,7 @@ function apiStartRound_(body) {
     if (!it) return { ok:false, error:"NO_ITEMS" };
 
     const roundSeconds = Number(r[im.roundSeconds] || 25);
+    // 最短給 5 秒，避免被設定成 0 秒導致根本無法出價
     const deadline = nowMs_() + Math.max(5, roundSeconds) * 1000;
 
     r[im.round] = round;
@@ -512,7 +524,32 @@ function apiBid_(body) {
   if (!Number.isFinite(bid) || bid < 0) return { ok:false, error:"BAD_BID" };
 
   return withLock_(() => {
-    // 只記事件，結算再算
+    const ss = db_();
+    const rooms = ss.getSheetByName(TABS.ROOMS);
+    const players = ss.getSheetByName(TABS.PLAYERS);
+
+    // 1) 檢查房間狀態與回合，避免「非競標中」仍可送 bid
+    const roomRowIndex = findRoomRow_(rooms, roomId);
+    if (roomRowIndex < 0) return { ok:false, error:"ROOM_NOT_FOUND" };
+    const roomHeaders = rooms.getRange(1,1,1,rooms.getLastColumn()).getValues()[0];
+    const rim = idxMap_(roomHeaders);
+    const roomRow = getRow_(rooms, roomRowIndex, rooms.getLastColumn());
+
+    if (String(roomRow[rim.state]) !== "BIDDING") return { ok:false, error:"NOT_IN_BIDDING" };
+    if (Number(roomRow[rim.round] || 0) !== round) return { ok:false, error:"ROUND_MISMATCH" };
+
+    const deadline = Number(roomRow[rim.bidDeadlineTs] || 0);
+    if (deadline && nowMs_() > deadline) return { ok:false, error:"BID_DEADLINE_PASSED" };
+
+    // 2) 檢查玩家是否存在於該房且預算足夠
+    const pAll = readAll_(players);
+    const pim = idxMap_(pAll.headers);
+    const me = pAll.rows.find(pr => String(pr[pim.roomId]) === roomId && String(pr[pim.playerId]) === playerId);
+    if (!me) return { ok:false, error:"PLAYER_NOT_IN_ROOM" };
+    const budget = Number(me[pim.budget] || 0);
+    if (bid > budget) return { ok:false, error:"BID_OVER_BUDGET" };
+
+    // 3) 通過檢查後才記事件，結算時再讀最後一筆 BID
     addEvent_(roomId, "BID", playerId, { round, bid });
     touchRoomUpdatedAt_(roomId);
     return { ok:true };
@@ -558,7 +595,7 @@ function apiResolve_(body) {
       pIndexById[String(pr[pim.playerId])] = i + 2; // sheet row index
     });
 
-    // gather latest bid per player for this round
+    // 蒐集本回合每位玩家「最後一次」出價
     const eAll = readAll_(events);
     const eim = idxMap_(eAll.headers);
     const lastBid = {}; // playerId -> bid
@@ -572,7 +609,7 @@ function apiResolve_(body) {
       lastBid[pid] = Number(payload.bid || 0);
     });
 
-    // find winner: highest bid that <= budget
+    // 找贏家：符合預算限制下，出價最高者獲勝
     let winnerId = "";
     let winnerBid = -1;
 
@@ -599,7 +636,7 @@ function apiResolve_(body) {
       setRow_(players, prowIdx, row);
     }
 
-    // set state back to LOBBY
+    // 本回合結束，房間狀態回到 LOBBY
     r[rim.state] = "LOBBY";
     r[rim.itemId] = "";
     r[rim.bidDeadlineTs] = "";
@@ -721,7 +758,8 @@ function findItem_(itemsSheet, itemId) {
 
 function seedCards_(ss, roomId, playerId) {
   const cards = ss.getSheetByName(TABS.CARDS);
-  // 一人三張卡，先給最簡化示例
+  // 每位玩家初始化三張卡。
+  // 目前卡牌只記錄事件，不直接改變結算邏輯，方便後續逐步擴充規則。
   const seed = [
     [roomId, playerId, "C1", "加倍迷惑", "讓提示文字更混亂（目前只記錄事件）", 1],
     [roomId, playerId, "C2", "假出價", "丟一個假 bid（目前只記錄事件）", 1],
@@ -749,44 +787,4 @@ function showBindingInfo() {
 
   console.log("DB_INFO=" + JSON.stringify(info));
   return info;
-}
-function apiSetup_() {
-  return withLock_(() => {
-    const ss = db_();
-
-    ensureSheet_(ss, "Rooms", [
-      "roomId","lobbyCode","createdAt","updatedAt","state","round","maxRounds","roundSeconds","startingBudget","hostToken","bidDeadlineTs","itemId"
-    ]);
-
-    ensureSheet_(ss, "Players", [
-      "roomId","playerId","name","isHost","budget","score","joinedAt","updatedAt"
-    ]);
-
-    ensureSheet_(ss, "Events", [
-      "roomId","eventId","ts","type","playerId","payloadJson"
-    ]);
-
-    ensureSheet_(ss, "Items", [
-      "itemId","name","publicHint","hiddenValue"
-    ]);
-
-    ensureSheet_(ss, "PlayerCards", [
-      "roomId","playerId","cardId","name","desc","count"
-    ]);
-
-    // seed items if empty
-    const items = ss.getSheetByName("Items");
-    if (items.getLastRow() < 2) {
-      const seed = [
-        ["ITM1","神秘古董","看起來很值錢，但可能是垃圾", 30],
-        ["ITM2","限量公仔","大家都說會漲價", 25],
-        ["ITM3","二手筆電","螢幕有刮痕，但能用", 18],
-        ["ITM4","奇怪的箱子","搖一搖會響", 22],
-        ["ITM5","無敵券","規則外的力量感", 35]
-      ];
-      items.getRange(2,1,seed.length,4).setValues(seed);
-    }
-
-    return { ok:true };
-  });
 }
