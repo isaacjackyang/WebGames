@@ -183,8 +183,16 @@
 </main>
 
 <script>
-  // ===== API URL: prefer /exec, remove query/hash =====
+  // ===== API URL =====
+  // 優先使用後端在 template 注入的 apiBaseUrl，避免 iframe/googleusercontent URL 造成「拿到 HTML 不是 JSON」。
+  // 其次可用 ?api=... 強制覆寫，方便除錯或切換不同部署。
+  // 最後才 fallback 到目前網址推導（兼容本地靜態測試）。
+  const TEMPLATE_API_BASE = "<?= apiBaseUrl ?>";
+
   function computeApiUrl(){
+    const byTemplate = String(TEMPLATE_API_BASE || "").trim();
+    if (byTemplate) return byTemplate;
+
     const u = new URL(window.location.href);
     const byQuery = (u.searchParams.get("api") || "").trim();
     if (byQuery) return byQuery;

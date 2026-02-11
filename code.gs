@@ -30,7 +30,13 @@ function doGet(e) {
   }
 
   // HTML page
-  const html = HtmlService.createHtmlOutputFromFile("index")
+  // 使用 template 注入「真正可呼叫 API 的 Web App URL」。
+  // 原因：使用者瀏覽器中的 location 可能是 googleusercontent iframe URL，
+  // 若前端直接拿 location 當 API endpoint，常會打到 HTML 容器而不是 JSON API。
+  const tpl = HtmlService.createTemplateFromFile("index");
+  tpl.apiBaseUrl = ScriptApp.getService().getUrl();
+
+  const html = tpl.evaluate()
     .setTitle("Blind Auction Party")
     // 盡量避免 frame-ancestors / XFO 類問題影響行為（你貼的警告就是這類）
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
@@ -763,44 +769,4 @@ function showBindingInfo() {
 
   console.log("DB_INFO=" + JSON.stringify(info));
   return info;
-}
-function apiSetup_() {
-  return withLock_(() => {
-    const ss = db_();
-
-    ensureSheet_(ss, "Rooms", [
-      "roomId","lobbyCode","createdAt","updatedAt","state","round","maxRounds","roundSeconds","startingBudget","hostToken","bidDeadlineTs","itemId"
-    ]);
-
-    ensureSheet_(ss, "Players", [
-      "roomId","playerId","name","isHost","budget","score","joinedAt","updatedAt"
-    ]);
-
-    ensureSheet_(ss, "Events", [
-      "roomId","eventId","ts","type","playerId","payloadJson"
-    ]);
-
-    ensureSheet_(ss, "Items", [
-      "itemId","name","publicHint","hiddenValue"
-    ]);
-
-    ensureSheet_(ss, "PlayerCards", [
-      "roomId","playerId","cardId","name","desc","count"
-    ]);
-
-    // seed items if empty
-    const items = ss.getSheetByName("Items");
-    if (items.getLastRow() < 2) {
-      const seed = [
-        ["ITM1","神秘古董","看起來很值錢，但可能是垃圾", 30],
-        ["ITM2","限量公仔","大家都說會漲價", 25],
-        ["ITM3","二手筆電","螢幕有刮痕，但能用", 18],
-        ["ITM4","奇怪的箱子","搖一搖會響", 22],
-        ["ITM5","無敵券","規則外的力量感", 35]
-      ];
-      items.getRange(2,1,seed.length,4).setValues(seed);
-    }
-
-    return { ok:true };
-  });
 }
