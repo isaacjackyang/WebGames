@@ -135,6 +135,7 @@
         <span class="pill">roomId</span>
         <span class="mono" id="roomIdText"></span>
         <span style="margin-left:auto"></span>
+        <button id="btnResetDb" class="danger" style="display:none">重置資料庫（Host）</button>
         <button id="btnLeave" class="secondary">離開</button>
       </div>
 
@@ -486,6 +487,25 @@
     if (!out.ok) throw new Error(out.error || "resolve failed");
   }
 
+  async function resetDatabaseAsHost(){
+    showErr("roomError", "");
+    if (!S.hostToken) throw new Error("只有房主可以重置資料庫");
+    const ok = window.confirm("確定要重置整個資料庫嗎？所有房間與玩家資料都會清空。");
+    if (!ok) return;
+
+    setStatus(true, "重置資料庫中…");
+    const out = await apiPOST("resetDatabase", { roomId:S.roomId, hostToken:S.hostToken });
+    if (!out.ok) throw new Error(out.error || "resetDatabase failed");
+
+    showLobby();
+    S.roomId = "";
+    S.playerId = "";
+    S.hostToken = "";
+    S.sinceEventId = 0;
+    document.getElementById("roomsTbody").innerHTML = `<tr><td colspan="5" class="small">尚未載入</td></tr>`;
+    setStatus(true, "資料庫已重置");
+  }
+
   function stopSync(){ S.stop = true; }
 
   function startSync(){
@@ -541,6 +561,7 @@
       }
 
       document.getElementById("btnResolve").style.display = (S.hostToken && room.state==="BIDDING") ? "" : "none";
+      document.getElementById("btnResetDb").style.display = S.hostToken ? "" : "none";
 
       if (events.length){
         const maxId = Math.max(...events.map(e=>Number(e.eventId||0)));
@@ -580,6 +601,11 @@
   document.getElementById("btnResolve").onclick = async ()=>{
     try { await resolveHost(); }
     catch(err){ showErr("roomError", String(err.message||err)); setStatus(false,"結算失敗"); log("RESOLVE_ERR:\n"+String(err.message||err)); }
+  };
+
+  document.getElementById("btnResetDb").onclick = async ()=>{
+    try { await resetDatabaseAsHost(); }
+    catch(err){ showErr("roomError", String(err.message||err)); setStatus(false,"重置失敗"); log("RESET_DB_ERR:\n"+String(err.message||err)); }
   };
 
   // 初始化DB（不必進 Apps Script 手動 Run）

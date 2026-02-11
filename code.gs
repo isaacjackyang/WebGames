@@ -83,6 +83,7 @@ function handleApiGet_(action, p) {
     case "bid": return apiBid_(p);
     case "resolve": return apiResolve_(p);
     case "playCard": return apiPlayCard_(p);
+    case "resetDatabase": return apiResetDatabase_(p);
     default: return { ok: false, error: "UNKNOWN_GET_ACTION:" + action };
   }
 }
@@ -97,6 +98,7 @@ function handleApiPost_(action, body) {
     case "bid": return apiBid_(body);
     case "resolve": return apiResolve_(body);
     case "playCard": return apiPlayCard_(body);
+    case "resetDatabase": return apiResetDatabase_(body);
     default: return { ok: false, error: "UNKNOWN_POST_ACTION:" + action };
   }
 }
@@ -125,6 +127,53 @@ function apiOut_(obj, params) {
       .setMimeType(ContentService.MimeType.JAVASCRIPT);
   }
   return jsonOut_(obj);
+}
+
+
+function clearSheetDataRows_(sh, width) {
+  const last = sh.getLastRow();
+  if (last <= 1) return;
+  sh.getRange(2, 1, last - 1, width).clearContent();
+}
+
+function apiResetDatabase_(body) {
+  const roomId = String(body.roomId || "").trim().toUpperCase();
+  const hostToken = String(body.hostToken || "").trim();
+  if (!roomId) return { ok:false, error:"MISSING_ROOMID" };
+  if (!hostToken) return { ok:false, error:"MISSING_HOSTTOKEN" };
+
+  return withLock_(() => {
+    const ss = db_();
+    const rooms = ss.getSheetByName(TABS.ROOMS);
+    const idx = findRoomRow_(rooms, roomId);
+    if (idx < 0) return { ok:false, error:"ROOM_NOT_FOUND" };
+
+    const headers = rooms.getRange(1,1,1,rooms.getLastColumn()).getValues()[0];
+    const im = idxMap_(headers);
+    const row = getRow_(rooms, idx, rooms.getLastColumn());
+    if (String(row[im.hostToken]) !== hostToken) return { ok:false, error:"HOST_TOKEN_MISMATCH" };
+
+    [TABS.ROOMS, TABS.PLAYERS, TABS.EVENTS, TABS.CARDS].forEach(name => {
+      const sh = ss.getSheetByName(name);
+      if (!sh) return;
+      clearSheetDataRows_(sh, sh.getLastColumn());
+    });
+
+    const items = ss.getSheetByName(TABS.ITEMS);
+    if (items) {
+      clearSheetDataRows_(items, items.getLastColumn());
+      const seed = [
+        ["ITM1","神秘古董","看起來很值錢，但可能是垃圾", 30],
+        ["ITM2","限量公仔","大家都說會漲價", 25],
+        ["ITM3","二手筆電","螢幕有刮痕，但能用", 18],
+        ["ITM4","奇怪的箱子","搖一搖會響", 22],
+        ["ITM5","無敵券","規則外的力量感", 35]
+      ];
+      items.getRange(2,1,seed.length,4).setValues(seed);
+    }
+
+    return { ok:true };
+  });
 }
 
 function nowMs_() { return Date.now(); }
