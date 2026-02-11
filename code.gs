@@ -67,6 +67,16 @@ function handleApiGet_(action, p) {
     case "debugInfo": return apiDebugInfo_();
     case "listLobbyRooms": return apiListLobbyRooms_(p);
     case "sync": return apiSync_(p);
+    // 某些部署環境下 POST 可能被導到 HTML（例如權限/iframe 流程），
+    // 前端會 fallback 成 GET，因此提供 GET 版 action 以提升容錯。
+    case "setup": return apiSetup_();
+    case "createRoom": return apiCreateRoom_(p);
+    case "joinRoom": return apiJoinRoom_(p);
+    case "updateSettings": return apiUpdateSettings_(p);
+    case "startRound": return apiStartRound_(p);
+    case "bid": return apiBid_(p);
+    case "resolve": return apiResolve_(p);
+    case "playCard": return apiPlayCard_(p);
     default: return { ok: false, error: "UNKNOWN_GET_ACTION:" + action };
   }
 }
