@@ -219,7 +219,12 @@
     name: "",
     sinceEventId: 0,
     syncing: false,   // single-flight
-    stop: false
+    stop: false,
+    preferJsonp: false
+  };
+
+  const UI = {
+    lobbyLoading: false
   };
 
   function setStatus(ok, msg){
@@ -304,7 +309,13 @@
     return s.length >= 2 ? s.slice(0,16) : "";
   }
 
+  function isNetworkLikeError(err){
+    const m = String(err && err.message ? err.message : err || "").toLowerCase();
+    return m.includes("networkerror") || m.includes("failed to fetch") || m.includes("load failed") || m.includes("fetch");
+  }
+
   async function apiGET(action, params={}){
+    if (S.preferJsonp) return apiGETJsonp(action, params);
     const u = new URL(API_URL);
     u.searchParams.set("action", action);
     for (const [k,v] of Object.entries(params)){
@@ -321,6 +332,7 @@
       // 在本地 file:// 或跨來源靜態頁，fetch 可能直接丟 TypeError: NetworkError。
       // 自動改用 JSONP（需後端支援 callback）。
       log("GET_FALLBACK_JSONP action=" + action + " reason=" + String(err && err.message ? err.message : err));
+      if (isNetworkLikeError(err)) S.preferJsonp = true;
       return apiGETJsonp(action, params);
     }
   }
@@ -382,15 +394,32 @@
     }
   }
 
+  function setLobbyLoading(v){
+    UI.lobbyLoading = !!v;
+    document.getElementById("btnRefresh").disabled = UI.lobbyLoading;
+    document.getElementById("btnCreateRoom").disabled = UI.lobbyLoading;
+    document.getElementById("btnJoinRoom").disabled = UI.lobbyLoading;
+  }
+
   async function refreshLobby(){
     showErr("lobbyError","");
+    if (UI.lobbyLoading) return;
     const lobbyCode = normalizeLobbyCode(document.getElementById("lobbyCode").value);
-    if (!lobbyCode) { showErr("lobbyError","房名至少 2 個字（可用中文/英文/數字）"); return; }
-    setStatus(true,"載入房間列表…");
-    const out = await apiGET("listLobbyRooms", { lobbyCode });
-    if (!out.ok) throw new Error(out.error || "listLobbyRooms failed");
-    renderRooms(out.rooms || []);
-    setStatus(true,"大廳就緒");
+    if (!lobbyCode) {
+      showErr("lobbyError","房名至少 2 個字（可用中文/英文/數字）");
+      setStatus(false,"請先填房名");
+      return;
+    }
+    setLobbyLoading(true);
+    try {
+      setStatus(true,"載入房間列表…");
+      const out = await apiGET("listLobbyRooms", { lobbyCode });
+      if (!out.ok) throw new Error(out.error || "listLobbyRooms failed");
+      renderRooms(out.rooms || []);
+      setStatus(true,"大廳就緒");
+    } finally {
+      setLobbyLoading(false);
+    }
   }
 
   async function createRoom(){
