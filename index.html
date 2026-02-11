@@ -50,7 +50,7 @@
 
   <div style="height:12px"></div>
 
-  <!-- LOBBY -->
+  <!-- LOBBY：建立/加入房間與查看活躍房間列表 -->
   <section class="grid2" id="viewLobby">
     <div class="card">
       <h3>大廳</h3>
@@ -92,7 +92,7 @@
     </div>
   </section>
 
-  <!-- ROOM -->
+  <!-- ROOM：遊戲內資訊（玩家、回合、出價、結算） -->
   <section class="grid2" id="viewRoom" style="display:none">
     <div class="card">
       <h3>房間</h3>
@@ -129,6 +129,7 @@
         <div class="row">
           <input id="bidInput" type="number" min="0" step="1" style="width:160px" placeholder="例如：12"/>
           <button id="btnBid">送出出價</button>
+          <button id="btnStartRound" class="secondary" style="display:none">開始回合（Host）</button>
           <button id="btnResolve" class="danger" style="display:none">結算（Host）</button>
         </div>
       </div>
@@ -148,7 +149,10 @@
 </main>
 
 <script>
-  // ===== API URL: prefer /exec, remove query/hash =====
+    // ===== API URL 區塊 =====
+  // Apps Script 在測試版本通常是 /dev，正式部署是 /exec。
+  // 為了讓前端在兩種網址都能工作，這裡統一把 /dev 轉成 /exec，
+  // 並移除 hash，避免 API URL 被前端路由片段污染。
   function computeApiUrl(){
     const u = new URL(window.location.href);
     u.hash = "";
@@ -158,6 +162,10 @@
   const API_URL = computeApiUrl();
   document.getElementById("apiUrlText").textContent = "API: " + API_URL;
 
+  // 全域前端狀態（single source of truth）：
+  // - roomId/playerId/hostToken：登入房間後識別身分
+  // - sinceEventId：增量同步游標，避免重複拉全量事件
+  // - syncing + stop：控制輪詢避免重入與離房後仍持續請求
   const S = {
     roomId: "",
     playerId: "",
@@ -168,12 +176,14 @@
     stop: false
   };
 
+  // 更新頁面頂部狀態列，讓玩家知道目前流程
   function setStatus(ok, msg){
     const el = document.getElementById("statusText");
     el.textContent = msg;
     el.className = ok ? "small ok" : "small bad";
   }
 
+  // 顯示/隱藏錯誤訊息（大廳與房間共用）
   function showErr(id, msg){
     const el = document.getElementById(id);
     if (!msg) { el.style.display="none"; el.textContent=""; return; }
@@ -181,6 +191,7 @@
     el.textContent = msg;
   }
 
+  // Debug log：保留最後 220 行，避免記憶體無限成長
   function log(msg){
     const box = document.getElementById("debugLog");
     box.textContent = (box.textContent + "\n" + msg).trim();
@@ -189,22 +200,26 @@
     box.scrollTop = box.scrollHeight;
   }
 
+  // 某些權限/部署錯誤會回 HTML；先檢測再 JSON.parse，錯誤更友善
   function looksLikeHtml(t){
     t = String(t||"").trim();
     return t.startsWith("<!DOCTYPE") || t.startsWith("<html") || t.includes("<head") || t.includes("<body");
   }
 
+  // 表單必填檢查工具
   function must(s, name){
     s = String(s||"").trim();
     if (!s) throw new Error("請填入：" + name);
     return s;
   }
 
+  // 房名正規化：只留英數且限制長度，和後端格式一致
   function normalizeLobbyCode(s){
     s = String(s||"").trim().toUpperCase().replace(/[^A-Z0-9]/g,"");
     return s.length >= 2 ? s.slice(0,8) : "";
   }
 
+  // 統一 GET API 呼叫：附 action 與 query 參數，並防呆 HTML 回應
   async function apiGET(action, params={}){
     const u = new URL(API_URL);
     u.searchParams.set("action", action);
@@ -219,6 +234,7 @@
     catch(_) { throw new Error("API 回傳非 JSON。前 200 字：\n" + text.slice(0,200)); }
   }
 
+  // 統一 POST API 呼叫：所有操作都以 JSON payload 傳遞
   async function apiPOST(action, payload={}){
     const res = await fetch(API_URL, {
       method:"POST",
@@ -232,17 +248,20 @@
     catch(_) { throw new Error("API 回傳非 JSON。前 200 字：\n" + text.slice(0,200)); }
   }
 
+  // 切回大廳畫面並停止輪詢
   function showLobby(){
     document.getElementById("viewLobby").style.display="";
     document.getElementById("viewRoom").style.display="none";
     stopSync();
   }
 
+  // 進入房間畫面
   function showRoom(){
     document.getElementById("viewLobby").style.display="none";
     document.getElementById("viewRoom").style.display="";
   }
 
+  // 渲染房間列表
   function renderRooms(rooms){
     const tb = document.getElementById("roomsTbody");
     tb.innerHTML="";
@@ -264,6 +283,7 @@
     }
   }
 
+  // 讀取同 lobbyCode 的活躍房間
   async function refreshLobby(){
     showErr("lobbyError","");
     const lobbyCode = normalizeLobbyCode(document.getElementById("lobbyCode").value);
@@ -275,6 +295,7 @@
     setStatus(true,"大廳就緒");
   }
 
+  // 建房流程：createRoom -> joinRoom（建房者同時加入）
   async function createRoom(){
     showErr("lobbyError","");
     const lobbyCode = normalizeLobbyCode(must(document.getElementById("lobbyCode").value,"房名/同場域代碼"));
@@ -296,6 +317,7 @@
     enterRoom();
   }
 
+  // 以 roomId 加入既有房間
   async function joinRoomById(roomId){
     showErr("lobbyError","");
     const name = must(document.getElementById("playerName").value,"你的名字").slice(0,18);
@@ -314,6 +336,7 @@
     enterRoom();
   }
 
+  // 進房初始化：切畫面、填基本資訊、啟動輪詢
   function enterRoom(){
     showRoom();
     document.getElementById("roomIdText").textContent = S.roomId;
@@ -323,6 +346,7 @@
     startSync();
   }
 
+  // 送出出價（由後端再做狀態、回合、預算二次驗證）
   async function sendBid(){
     showErr("roomError","");
     const bid = Number(document.getElementById("bidInput").value);
@@ -332,14 +356,25 @@
     if (!out.ok) throw new Error(out.error || "bid failed");
   }
 
+  // Host 結算本回合
   async function resolveHost(){
     showErr("roomError","");
     const out = await apiPOST("resolve", { roomId:S.roomId, hostToken:S.hostToken });
     if (!out.ok) throw new Error(out.error || "resolve failed");
   }
 
+
+  // Host 開新回合（從 LOBBY 進入 BIDDING）
+  async function startRoundHost(){
+    showErr("roomError","");
+    const out = await apiPOST("startRound", { roomId:S.roomId, hostToken:S.hostToken });
+    if (!out.ok) throw new Error(out.error || "startRound failed");
+  }
+
+  // 停止輪詢旗標
   function stopSync(){ S.stop = true; }
 
+  // 啟動輪詢：持續呼叫 syncOnce，失敗時顯示訊息並退避重試
   function startSync(){
     S.stop = false;
     (async function loop(){
@@ -356,6 +391,7 @@
     })();
   }
 
+  // 單次同步：拉房間快照 + 增量事件並更新畫面
   async function syncOnce(){
     if (S.syncing) return;
     S.syncing = true;
@@ -393,6 +429,7 @@
       }
 
       document.getElementById("btnResolve").style.display = (S.hostToken && room.state==="BIDDING") ? "" : "none";
+      document.getElementById("btnStartRound").style.display = (S.hostToken && room.state!=="BIDDING") ? "" : "none";
 
       if (events.length){
         const maxId = Math.max(...events.map(e=>Number(e.eventId||0)));
@@ -432,6 +469,11 @@
   document.getElementById("btnResolve").onclick = async ()=>{
     try { await resolveHost(); }
     catch(err){ showErr("roomError", String(err.message||err)); setStatus(false,"結算失敗"); log("RESOLVE_ERR:\n"+String(err.message||err)); }
+  };
+
+  document.getElementById("btnStartRound").onclick = async ()=>{
+    try { await startRoundHost(); }
+    catch(err){ showErr("roomError", String(err.message||err)); setStatus(false,"開局失敗"); log("START_ROUND_ERR:\n"+String(err.message||err)); }
   };
 
   // 初始化DB（不必進 Apps Script 手動 Run）
