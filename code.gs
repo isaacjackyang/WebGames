@@ -342,7 +342,7 @@ function apiJoinRoom_(body) {
     let count = 0;
     rows.forEach(r => { if (String(r[im.roomId]) === roomId) count++; });
 
-    const playerId = "P" + rid_(6);
+    const playerId = newUniquePlayerId_(rows, im);
     const roomRow = getRow_(rooms, roomRowIndex, rooms.getLastColumn());
     const roomHeaders = rooms.getRange(1,1,1,rooms.getLastColumn()).getValues()[0];
     const rim = idxMap_(roomHeaders);
@@ -829,4 +829,25 @@ function showBindingInfo() {
 
   console.log("DB_INFO=" + JSON.stringify(info));
   return info;
+}
+
+function newUniquePlayerId_(playerRows, playerIndexMap) {
+  const used = new Set();
+  playerRows.forEach(r => {
+    const pid = String(r[playerIndexMap.playerId] || "").trim();
+    if (pid) used.add(pid);
+  });
+
+  // 隨機 ID（P + 6 chars）理論上極少衝突；若碰撞就重試，避免重複 playerId 寫入。
+  for (let i = 0; i < 20; i++) {
+    const id = "P" + rid_(6);
+    if (!used.has(id)) return id;
+  }
+
+  // 極端情況 fallback：加入時間戳片段，提高唯一性。
+  let fallback = "P" + rid_(6) + String(nowMs_()).slice(-4);
+  while (used.has(fallback)) {
+    fallback = "P" + rid_(6) + String(nowMs_()).slice(-4);
+  }
+  return fallback;
 }
