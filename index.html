@@ -326,21 +326,28 @@
   }
 
   async function apiPOST(action, payload={}){
-    const res = await fetch(API_URL, {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      credentials:"include",
-      body: JSON.stringify({ action, ...payload })
-    });
-    const text = await res.text();
-    if (looksLikeHtml(text)){
-      // Apps Script 可能在 POST 時被 302 轉址，導致 body 遺失並回傳 HTML。
-      // 遇到此情況自動改走 GET + query payload。
-      log("POST_FALLBACK_GET action=" + action);
+    try {
+      const res = await fetch(API_URL, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        credentials:"include",
+        body: JSON.stringify({ action, ...payload })
+      });
+      const text = await res.text();
+      if (looksLikeHtml(text)){
+        // Apps Script 可能在 POST 時被 302 轉址，導致 body 遺失並回傳 HTML。
+        // 遇到此情況自動改走 GET + query payload。
+        log("POST_FALLBACK_GET action=" + action);
+        return apiGET(action, payload);
+      }
+      try { return JSON.parse(text); }
+      catch(_) { throw new Error("API 回傳非 JSON。前 200 字：\n" + text.slice(0,200)); }
+    } catch (err){
+      // 在本地 file:// 或跨來源靜態頁，POST fetch 可能直接拋 NetworkError。
+      // 與 GET 一樣改走 query + JSONP fallback，避免「API OK 但 createRoom 失敗」。
+      log("POST_FALLBACK_GET action=" + action + " reason=" + String(err && err.message ? err.message : err));
       return apiGET(action, payload);
     }
-    try { return JSON.parse(text); }
-    catch(_) { throw new Error("API 回傳非 JSON。前 200 字：\n" + text.slice(0,200)); }
   }
 
   function showLobby(){
