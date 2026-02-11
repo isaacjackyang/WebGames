@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Blind Auction Party V3.1b</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", Arial, sans-serif; }
+    body { margin: 0; background:#0b0f14; color:#e6edf3; }
+    header { padding: 14px 16px; border-bottom:1px solid #1f2a37; display:flex; align-items:center; justify-content:space-between; gap:12px;}
+    header .small { color:#9fb0c2; font-size:12px; }
+    main { padding: 16px; max-width: 980px; margin: 0 auto; }
+    .row { display:flex; gap:12px; flex-wrap:wrap; }
+    .card { background:#0f1621; border:1px solid #1f2a37; border-radius:12px; padding:14px; }
+    .card h2 { margin:0 0 10px; font-size:16px; }
+    label { display:block; font-size:12px; color:#9fb0c2; margin:10px 0 6px; }
+    input, button, textarea { font: inherit; }
+    input, textarea {
+      background:#0b1220; color:#e6edf3; border:1px solid #223043;
+      border-radius:10px; padding:10px 12px; outline:none;
+    }
+    input:focus, textarea:focus { border-color:#3b82f6; }
+    button {
+      background:#1d4ed8; color:white; border:none; border-radius:10px;
+      padding:10px 12px; cursor:pointer; font-weight:600;
+    }
+    button.secondary { background:#334155; }
+    button.danger { background:#b91c1c; }
+    button:disabled { opacity:.55; cursor:not-allowed; }
+    .hint { color:#9fb0c2; font-size:12px; margin-top:6px; }
+    .status { padding:10px 12px; border-radius:10px; background:#0b1220; border:1px solid #223043; }
+    .ok { color:#86efac; }
+    .bad { color:#fca5a5; }
+    .pill { display:inline-block; padding:4px 8px; border-radius:999px; font-size:12px; border:1px solid #223043; background:#0b1220; color:#cbd5e1; }
+    .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+    @media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+    table { width:100%; border-collapse: collapse; }
+    th, td { border-bottom:1px solid #1f2a37; padding:8px 6px; font-size:13px; text-align:left; }
+    th { color:#9fb0c2; font-weight:600; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .log { max-height: 240px; overflow:auto; font-size:12px; background:#0b1220; border:1px solid #223043; border-radius:10px; padding:10px; }
+    .hr { height:1px; background:#1f2a37; margin:10px 0; }
+    .right { margin-left:auto; }
+    a { color:#93c5fd; }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <div style="font-weight:800">Blind Auction Party</div>
+    <div class="small">Google Sheet 當 DB / Apps Script 當 API</div>
+  </div>
+  <div class="small mono" id="apiUrlText"></div>
+</header>
+
+<main>
+  <div id="topStatus" class="status">
+    <span class="pill">狀態</span>
+    <span id="statusText" class="small">初始化中…</span>
+  </div>
+
+  <div class="hr"></div>
+
+  <!-- LOBBY -->
+  <section id="viewLobby" class="grid2">
+    <div class="card">
+      <h2>大廳</h2>
+
+      <label>房名 / 同場域代碼（lobbyCode）</label>
+      <input id="lobbyCode" placeholder="例如：PARTY01" autocomplete="off" />
+
+      <label>你的名字</label>
+      <input id="playerName" placeholder="例如：Jack" autocomplete="off" />
+
+      <div class="row" style="margin-top:12px">
+        <button id="btnCreateRoom">開新房間</button>
+        <button id="btnRefresh" class="secondary">刷新房間列表</button>
+      </div>
+
+      <div class="hint">
+        ※ 這裡的「房名」是同一個 Wi-Fi 場域大家共用的代碼。<br/>
+        ※ 「開新房間」會呼叫 `doPost` → action=createRoom。
+      </div>
+
+      <div class="hr"></div>
+
+      <label>用房間 ID 直接加入</label>
+      <div class="row">
+        <input id="joinRoomId" class="mono" placeholder="例如：AB12CD" style="flex:1; min-width:200px" />
+        <button id="btnJoinRoom" class="secondary">加入</button>
+      </div>
+
+      <div class="hint" id="lobbyError" style="display:none"></div>
+    </div>
+
+    <div class="card">
+      <h2>同場域房間列表</h2>
+      <div class="hint">會顯示最近活躍的房間（host 心跳 / sync 會更新）。</div>
+      <div class="hr"></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>房間</th>
+            <th>狀態</th>
+            <th>人數</th>
+            <th>回合</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="roomsTbody">
+          <tr><td colspan="5" class="small">尚未載入</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ROOM -->
+  <section id="viewRoom" style="display:none" class="grid2">
+    <div class="card">
+      <h2>房間</h2>
+
+      <div class="row">
+        <div class="pill">roomId</div>
+        <div class="mono" id="roomIdText"></div>
+        <div class="right"></div>
+        <button id="btnLeave" class="secondary">離開</button>
+      </div>
+
+      <div class="row" style="margin-top:8px">
+        <div class="pill">state</div>
+        <div id="roomStateText"></div>
+        <div class="pill">round</div>
+        <div id="roomRoundText"></div>
+      </div>
+
+      <div class="row" style="margin-top:8px">
+        <div class="pill">你的名字</div>
+        <div id="meNameText"></div>
+        <div class="pill">budget</div>
+        <div id="meBudgetText"></div>
+        <div class="pill">score</div>
+        <div id="meScoreText"></div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div id="itemBox" style="display:none">
+        <div class="row">
+          <div class="pill">本回合物品</div>
+          <div id="itemNameText" style="font-weight:700"></div>
+        </div>
+        <div class="hint" id="itemHintText"></div>
+
+        <label>出價</label>
+        <div class="row">
+          <input id="bidInput" type="number" min="0" step="1" placeholder="例如：12" style="width:160px" />
+          <button id="btnBid">送出出價</button>
+          <button id="btnResolve" class="danger" style="display:none">結算（Host）</button>
+        </div>
+
+        <div class="hint" id="deadlineText"></div>
+
+        <div class="hr"></div>
+        <h2 style="margin-top:0">技能卡</h2>
+        <div id="cardsBox" class="row"></div>
+      </div>
+
+      <div id="hostBox" style="display:none">
+        <div class="hr"></div>
+        <h2 style="margin-top:0">Host 控制</h2>
+
+        <div class="row">
+          <div style="min-width:260px">
+            <label>起始預算</label>
+            <input id="setBudget" type="number" min="10" max="500" step="1" />
+          </div>
+          <div style="min-width:260px">
+            <label>每回合秒數</label>
+            <input id="setSeconds" type="number" min="5" max="120" step="1" />
+          </div>
+          <div style="min-width:260px">
+            <label>最大回合</label>
+            <input id="setMaxRounds" type="number" min="1" max="50" step="1" />
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px">
+          <button id="btnSaveSettings" class="secondary">儲存設定</button>
+          <button id="btnStartRound">開始回合</button>
+        </div>
+
+        <div class="hr"></div>
+        <h2 style="margin-top:0">QR 進房</h2>
+        <div class="hint">同網路派對最方便的做法：掃描後自動填 roomId。</div>
+        <div class="row" style="align-items:flex-start">
+          <div style="flex:1; min-width:240px">
+            <div class="hint mono" id="joinLinkText"></div>
+          </div>
+          <img id="qrImg" alt="QR" style="width:160px;height:160px;border-radius:12px;border:1px solid #223043;background:#0b1220" />
+        </div>
+      </div>
+
+      <div class="hr"></div>
+      <div class="hint" id="roomError" style="display:none"></div>
+    </div>
+
+    <div class="card">
+      <h2>玩家</h2>
+      <div id="playersBox"></div>
+
+      <div class="hr"></div>
+      <h2 style="margin-top:0">事件</h2>
+      <div class="log" id="eventsLog"></div>
+
+      <div class="hr"></div>
+      <div class="hint">
+        Debug：按鈕沒反應時，看 DevTools → Network 是否有 POST 到 <span class="mono">/exec</span>。
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+  // ===========================
+  // API endpoint (NO TEMPLATE)
+  // ===========================
+  const API_URL = (() => {
+    const u = new URL(window.location.href);
+    u.search = "";
+    u.hash = "";
+    return u.toString();
+  })();
+  document.getElementById("apiUrlText").textContent = "API: " + API_URL;
+
+  // ===========================
+  // App state
+  // ===========================
+  const S = {
+    lobbyCode: "",
+    name: "",
+    roomId: "",
+    playerId: "",
+    hostToken: "",
+    sinceEventId: 0,
+    syncTimer: null,
+    lastSyncAt: 0,
+    room: null,
+    players: [],
+    myCards: [],
+    events: []
+  };
+
+  // ===========================
+  // Utilities
+  // ===========================
+  function setStatus(ok, msg) {
+    const el = document.getElementById("statusText");
+    el.textContent = msg;
+    el.className = ok ? "small ok" : "small bad";
+  }
+
+  function showErr(id, msg) {
+    const el = document.getElementById(id);
+    if (!msg) { el.style.display = "none"; el.textContent = ""; return; }
+    el.style.display = "block";
+    el.className = "hint bad";
+    el.textContent = msg;
+  }
+
+  function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+  async function fetchWithTimeout(url, opts={}, timeoutMs=12000){
+    const ctrl = new AbortController();
+    const t = setTimeout(()=>ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { ...opts, signal: ctrl.signal });
+      return res;
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  async function apiGET(action, params={}) {
+    const u = new URL(API_URL);
+    u.searchParams.set("action", action);
+    for (const [k,v] of Object.entries(params)) {
+      if (v === undefined || v === null || v === "") continue;
+      u.searchParams.set(k, String(v));
+    }
+    const res = await fetchWithTimeout(u.toString(), { method:"GET" }, 12000);
+    const text = await res.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch(e) {
+      throw new Error("API_GET_NOT_JSON: " + text.slice(0,120));
+    }
+    return json;
+  }
+
+  async function apiPOST(action, payload={}) {
+    const res = await fetchWithTimeout(API_URL, {
+      method: "POST",
+      headers: { "Content-Type":"application/json" },
+      body: JSON.stringify({ action, ...payload })
+    }, 12000);
+
+    const text = await res.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch(e) {
+      throw new Error("API_POST_NOT_JSON: " + text.slice(0,120));
+    }
+    return json;
+  }
+
+  function must(v, name){
+    const s = String(v||"").trim();
+    if (!s) throw new Error("請填入：" + name);
+    return s;
+  }
+
+  function normalizeLobbyCode(s){
+    s = String(s||"").trim().toUpperCase().replace(/[^A-Z0-9]/g,"");
+    if (s.length < 2) return "";
+    return s.slice(0,8);
+  }
+
+  function now(){ return Date.now(); }
+
+  // ===========================
+  // View switching
+  // ===========================
+  function showLobby(){
+    document.getElementById("viewLobby").style.display = "";
+    document.getElementById("viewRoom").style.display = "none";
+    stopSync();
+  }
+  function showRoom(){
+    document.getElementById("viewLobby").style.display = "none";
+    document.getElementById("viewRoom").style.display = "";
+  }
+
+  // ===========================
+  // Lobby actions
+  // ===========================
+  async function refreshLobby(){
+    showErr("lobbyError", "");
+    const lobbyCode = normalizeLobbyCode(document.getElementById("lobbyCode").value);
+    if (!lobbyCode) { renderRooms([]); showErr("lobbyError","房名/同場域代碼至少 2 碼英數"); return; }
+    setStatus(true, "載入房間列表…");
+    const data = await apiGET("listLobbyRooms", { lobbyCode });
+    if (!data.ok) { showErr("lobbyError", data.error || "listLobbyRooms 失敗"); setStatus(false, "大廳載入失敗"); return; }
+    renderRooms(data.rooms || []);
+    setStatus(true, "大廳就緒");
+  }
+
+  function renderRooms(rooms){
+    const tb = document.getElementById("roomsTbody");
+    tb.innerHTML = "";
+    if (!rooms.length) {
+      tb.innerHTML = `<tr><td colspan="5" class="small">沒有活躍房間（或 host 未心跳）</td></tr>`;
+      return;
+    }
+    for (const r of rooms) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="mono">${escapeHtml(r.roomId)}</td>
+        <td><span class="pill">${escapeHtml(r.state)}</span></td>
+        <td>${Number(r.playerCount||0)}</td>
+        <td>${Number(r.round||0)} / ${Number(r.maxRounds||0)}</td>
+        <td><button class="secondary" data-room="${escapeHtml(r.roomId)}">加入</button></td>
+      `;
+      tr.querySelector("button").addEventListener("click", ()=> joinRoomById(r.roomId));
+      tb.appendChild(tr);
+    }
+  }
+
+  async function createRoom(){
+    showErr("lobbyError", "");
+    const lobbyCode = normalizeLobbyCode(must(document.getElementById("lobbyCode").value, "房名/同場域代碼"));
+    const name = must(document.getElementById("playerName").value, "你的名字").slice(0,18);
+
+    // 讓你不再「覺得沒反應」：第一時間就有可見回饋
+    setStatus(true, "建立房間中（POST createRoom）…");
+
+    // 1) createRoom
+    const cr = await apiPOST("createRoom", { lobbyCode });
+    if (!cr.ok) { showErr("lobbyError", cr.error || "createRoom 失敗"); setStatus(false, "建立房間失敗"); return; }
+
+    // 2) host 自己也要 join 成為玩家
+    const jr = await apiPOST("joinRoom", { roomId: cr.roomId, name });
+    if (!jr.ok) { showErr("lobbyError", jr.error || "joinRoom 失敗"); setStatus(false, "加入房間失敗"); return; }
+
+    S.lobbyCode = lobbyCode;
+    S.name = name;
+    S.roomId = cr.roomId;
+    S.hostToken = cr.hostToken || "";
+    S.playerId = jr.playerId || "";
+    S.sinceEventId = 0;
+
+    setStatus(true, "房間建立完成");
+    enterRoomUI();
+  }
+
+  async function joinRoomById(roomId){
+    showErr("lobbyError", "");
+    const name = must(document.getElementById("playerName").value, "你的名字").slice(0,18);
+    roomId = must(roomId, "roomId").toUpperCase();
+
+    setStatus(true, "加入房間中（POST joinRoom）…");
+    const jr = await apiPOST("joinRoom", { roomId, name });
+    if (!jr.ok) { showErr("lobbyError", jr.error || "joinRoom 失敗"); setStatus(false, "加入房間失敗"); return; }
+
+    S.name = name;
+    S.roomId = roomId;
+    S.playerId = jr.playerId || "";
+    S.hostToken = ""; // 不知道 hostToken 就當玩家
+    S.sinceEventId = 0;
+
+    setStatus(true, "加入完成");
+    enterRoomUI();
+  }
+
+  // ===========================
+  // Room UI + Sync
+  // ===========================
+  function enterRoomUI(){
+    showRoom();
+    document.getElementById("roomIdText").textContent = S.roomId;
+    document.getElementById("meNameText").textContent = S.name;
+
+    // QR link: 同一個 webapp, 帶 roomId
+    const joinLink = API_URL + "?roomId=" + encodeURIComponent(S.roomId);
+    document.getElementById("joinLinkText").textContent = joinLink;
+
+    // 用 Google Chart 生成 QR（最少碼）
+    const qr = "https://chart.googleapis.com/chart?cht=qr&chs=160x160&chld=L|1&chl=" + encodeURIComponent(joinLink);
+    document.getElementById("qrImg").src = qr;
+
+    // Host UI
+    document.getElementById("hostBox").style.display = S.hostToken ? "" : "none";
+    document.getElementById("btnResolve").style.display = S.hostToken ? "" : "none";
+
+    // 若網址帶 roomId，幫你自動填
+    startSync();
+  }
+
+  function stopSync(){
+    if (S.syncTimer) clearInterval(S.syncTimer);
+    S.syncTimer = null;
+  }
+
+  function startSync(){
+    stopSync();
+    // 先立刻 sync 一次
+    syncOnce().catch(err => {
+      showErr("roomError", String(err.message||err));
+      setStatus(false, "sync 失敗");
+    });
+
+    // 自適應輪詢：bidding 1s，其他 3s
+    S.syncTimer = setInterval(()=> {
+      syncOnce().catch(()=>{ /* 不吵 UI */ });
+    }, 1200);
+  }
+
+  async function syncOnce(){
+    const params = {
+      roomId: S.roomId,
+      sinceEventId: S.sinceEventId,
+      playerId: S.playerId || "",
+      hostToken: S.hostToken || ""
+    };
+    const data = await apiGET("sync", params);
+    if (!data.ok) {
+      showErr("roomError", data.error || "sync 失敗");
+      setStatus(false, "同步失敗");
+      return;
+    }
+
+    S.room = data.room;
+    S.players = data.players || [];
+    S.myCards = data.myCards || [];
+    S.events = data.events || [];
+
+    if (S.events.length) {
+      S.sinceEventId = Math.max(S.sinceEventId, ...S.events.map(e => Number(e.eventId||0)));
+    }
+
+    renderRoom();
+    renderPlayers();
+    renderCards();
+    appendEvents(S.events);
+
+    // polling interval adjust
+    const st = (S.room && S.room.state) ? String(S.room.state) : "";
+    const wantMs = (st === "BIDDING") ? 1000 : 3000;
+    const curMs = 1200; // we used fixed interval; keep simple & stable
+    // 你要真的做自適應可以改成 setTimeout 版，但先把「能玩」做穩。
+    setStatus(true, "同步中…（" + st + "）");
+  }
+
+  function renderRoom(){
+    const r = S.room;
+    if (!r) return;
+
+    document.getElementById("roomStateText").textContent = r.state;
+    document.getElementById("roomRoundText").textContent = String(r.round || 0);
+
+    const me = S.players.find(p => p.playerId === S.playerId);
+    document.getElementById("meBudgetText").textContent = me ? String(me.budget) : "-";
+    document.getElementById("meScoreText").textContent = me ? String(me.score) : "-";
+
+    // Host settings inputs
+    if (S.hostToken) {
+      document.getElementById("setBudget").value = r.startingBudget || 100;
+      document.getElementById("setSeconds").value = r.roundSeconds || 25;
+      document.getElementById("setMaxRounds").value = r.maxRounds || 8;
+    }
+
+    // Item box
+    const itemBox = document.getElementById("itemBox");
+    if (r.state === "BIDDING" && r.item) {
+      itemBox.style.display = "";
+      document.getElementById("itemNameText").textContent = r.item.name || "";
+      document.getElementById("itemHintText").textContent = r.item.publicHint || "";
+
+      const dl = Number(r.bidDeadlineTs || 0);
+      const left = Math.max(0, dl - now());
+      document.getElementById("deadlineText").textContent =
+        "截止時間（ms epoch）：" + dl + "｜剩餘約 " + Math.ceil(left/1000) + " 秒";
+
+    } else {
+      itemBox.style.display = "none";
+      document.getElementById("deadlineText").textContent = "";
+    }
+
+    // Resolve button only when bidding & host
+    const showResolve = S.hostToken && r.state === "BIDDING";
+    document.getElementById("btnResolve").style.display = showResolve ? "" : "none";
+  }
+
+  function renderPlayers(){
+    const box = document.getElementById("playersBox");
+    if (!S.players.length) { box.innerHTML = `<div class="small">尚無玩家</div>`; return; }
+
+    const rows = S.players
+      .slice()
+      .sort((a,b)=> (b.score - a.score) || (b.budget - a.budget) || String(a.name).localeCompare(String(b.name)))
+      .map(p => {
+        const isMe = p.playerId === S.playerId;
+        return `
+          <div class="row" style="justify-content:space-between; padding:8px 0; border-bottom:1px solid #1f2a37">
+            <div>${isMe ? "👉 " : ""}<b>${escapeHtml(p.name)}</b> <span class="small mono">${escapeHtml(p.playerId.slice(0,6))}</span></div>
+            <div class="small">budget <b>${p.budget}</b> ｜ score <b>${p.score}</b></div>
+          </div>
+        `;
+      }).join("");
+
+    box.innerHTML = rows;
+  }
+
+  function renderCards(){
+    const box = document.getElementById("cardsBox");
+    box.innerHTML = "";
+    if (!S.myCards || !S.myCards.length) return;
+
+    for (const c of S.myCards) {
+      const wrap = document.createElement("div");
+      wrap.className = "card";
+      wrap.style.padding = "10px";
+      wrap.style.minWidth = "220px";
+      wrap.innerHTML = `
+        <div style="font-weight:800">${escapeHtml(c.name)} <span class="pill">x${Number(c.count||0)}</span></div>
+        <div class="hint">${escapeHtml(c.desc||"")}</div>
+        <div class="row" style="margin-top:10px">
+          <button class="secondary" ${Number(c.count||0) <= 0 ? "disabled" : ""}>使用</button>
+        </div>
+      `;
+      const btn = wrap.querySelector("button");
+      btn.addEventListener("click", ()=> playCard(c.cardId));
+      box.appendChild(wrap);
+    }
+  }
+
+  function appendEvents(events){
+    if (!events || !events.length) return;
+    const log = document.getElementById("eventsLog");
+    for (const ev of events) {
+      let payload = {};
+      try { payload = JSON.parse(ev.payloadJson || "{}"); } catch(_){}
+      const line =
+        `[${new Date(ev.ts).toLocaleTimeString()}] #${ev.eventId} ${ev.type} ` +
+        (ev.playerId ? `(${ev.playerId.slice(0,6)}) ` : "") +
+        JSON.stringify(payload);
+      const div = document.createElement("div");
+      div.textContent = line;
+      log.appendChild(div);
+    }
+    log.scrollTop = log.scrollHeight;
+  }
+
+  // ===========================
+  // Room actions (bid / cards / host)
+  // ===========================
+  async function sendBid(){
+    showErr("roomError","");
+    const r = S.room;
+    if (!r || r.state !== "BIDDING") { showErr("roomError","目前不是出價階段"); return; }
+    const bid = Number(document.getElementById("bidInput").value);
+    if (!Number.isFinite(bid) || bid < 0) { showErr("roomError","出價必須是 >= 0 的數字"); return; }
+
+    setStatus(true, "送出出價（POST bid）…");
+    const out = await apiPOST("bid", { roomId: S.roomId, playerId: S.playerId, round: r.round, bid });
+    if (!out.ok) { showErr("roomError", out.error || "bid 失敗"); setStatus(false,"出價失敗"); return; }
+    setStatus(true, "出價已送出");
+  }
+
+  async function playCard(cardId){
+    showErr("roomError","");
+    const r = S.room;
+    if (!r || r.state !== "BIDDING") { showErr("roomError","目前不是出價階段"); return; }
+    setStatus(true, "使用卡片（POST playCard）…");
+    const out = await apiPOST("playCard", { roomId: S.roomId, playerId: S.playerId, round: r.round, cardId });
+    if (!out.ok) { showErr("roomError", out.error || "playCard 失敗"); setStatus(false,"使用卡失敗"); return; }
+    setStatus(true, "已使用卡片");
+  }
+
+  async function hostSaveSettings(){
+    showErr("roomError","");
+    const startingBudget = Number(document.getElementById("setBudget").value);
+    const roundSeconds = Number(document.getElementById("setSeconds").value);
+    const maxRounds = Number(document.getElementById("setMaxRounds").value);
+
+    setStatus(true, "儲存設定（POST updateSettings）…");
+    const out = await apiPOST("updateSettings", {
+      roomId: S.roomId,
+      hostToken: S.hostToken,
+      startingBudget, roundSeconds, maxRounds
+    });
+    if (!out.ok) { showErr("roomError", out.error || "updateSettings 失敗"); setStatus(false,"設定失敗"); return; }
+    setStatus(true, "設定已更新");
+  }
+
+  async function hostStartRound(){
+    showErr("roomError","");
+    setStatus(true, "開始回合（POST startRound）…");
+    const out = await apiPOST("startRound", { roomId: S.roomId, hostToken: S.hostToken });
+    if (!out.ok) { showErr("roomError", out.error || "startRound 失敗"); setStatus(false,"開始失敗"); return; }
+    setStatus(true, "回合已開始");
+  }
+
+  async function hostResolve(){
+    showErr("roomError","");
+    setStatus(true, "結算中（POST resolve）…");
+    const out = await apiPOST("resolve", { roomId: S.roomId, hostToken: S.hostToken });
+    if (!out.ok) { showErr("roomError", out.error || "resolve 失敗"); setStatus(false,"結算失敗"); return; }
+    setStatus(true, "已結算");
+  }
+
+  function leaveRoom(){
+    S.roomId = "";
+    S.playerId = "";
+    S.hostToken = "";
+    S.sinceEventId = 0;
+    document.getElementById("eventsLog").innerHTML = "";
+    showErr("roomError","");
+    showLobby();
+    setStatus(true, "回到大廳");
+  }
+
+  // ===========================
+  // Escape
+  // ===========================
+  function escapeHtml(s){
+    return String(s||"")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  // ===========================
+  // Event bindings
+  // ===========================
+  document.getElementById("btnCreateRoom").addEventListener("click", async () => {
+    console.log("clicked create room");
+    try { await createRoom(); }
+    catch(err){ console.error(err); showErr("lobbyError", String(err.message||err)); setStatus(false,"建立房間失敗"); }
+  });
+
+  document.getElementById("btnRefresh").addEventListener("click", async () => {
+    console.log("clicked refresh lobby");
+    try { await refreshLobby(); }
+    catch(err){ console.error(err); showErr("lobbyError", String(err.message||err)); setStatus(false,"刷新失敗"); }
+  });
+
+  document.getElementById("btnJoinRoom").addEventListener("click", async () => {
+    console.log("clicked join room");
+    try {
+      const rid = must(document.getElementById("joinRoomId").value, "roomId");
+      await joinRoomById(rid);
+    } catch(err){ console.error(err); showErr("lobbyError", String(err.message||err)); setStatus(false,"加入失敗"); }
+  });
+
+  document.getElementById("btnBid").addEventListener("click", async () => {
+    console.log("clicked bid");
+    try { await sendBid(); }
+    catch(err){ console.error(err); showErr("roomError", String(err.message||err)); setStatus(false,"出價失敗"); }
+  });
+
+  document.getElementById("btnSaveSettings").addEventListener("click", async () => {
+    console.log("clicked save settings");
+    try { await hostSaveSettings(); }
+    catch(err){ console.error(err); showErr("roomError", String(err.message||err)); setStatus(false,"設定失敗"); }
+  });
+
+  document.getElementById("btnStartRound").addEventListener("click", async () => {
+    console.log("clicked start round");
+    try { await hostStartRound(); }
+    catch(err){ console.error(err); showErr("roomError", String(err.message||err)); setStatus(false,"開始失敗"); }
+  });
+
+  document.getElementById("btnResolve").addEventListener("click", async () => {
+    console.log("clicked resolve");
+    try { await hostResolve(); }
+    catch(err){ console.error(err); showErr("roomError", String(err.message||err)); setStatus(false,"結算失敗"); }
+  });
+
+  document.getElementById("btnLeave").addEventListener("click", leaveRoom);
+
+  // Auto-fill roomId if URL has ?roomId=XXXX (QR join)
+  (function initFromUrl(){
+    try {
+      const u = new URL(window.location.href);
+      const rid = u.searchParams.get("roomId");
+      if (rid) {
+        document.getElementById("joinRoomId").value = rid;
+      }
+      setStatus(true, "大廳就緒");
+    } catch(_) {
+      setStatus(true, "大廳就緒");
+    }
+  })();
+
+</script>
+</body>
+</html>
