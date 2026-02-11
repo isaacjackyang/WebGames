@@ -178,6 +178,10 @@ function setRow_(sh, rowIndex, row) {
 /***************
  * Setup + Debug
  ***************/
+function setup() {
+  return apiSetup_();
+}
+
 function apiSetup_() {
   return withLock_(() => {
     const ss = db_();
