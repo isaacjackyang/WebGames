@@ -189,9 +189,16 @@
   // 最後才 fallback 到目前網址推導（兼容本地靜態測試）。
   const TEMPLATE_API_BASE = "<?= apiBaseUrl ?>";
 
+  function isTemplatePlaceholder(s){
+    return /<\?=\s*apiBaseUrl\s*\?>/i.test(String(s||""));
+  }
+
   function computeApiUrl(){
     const byTemplate = String(TEMPLATE_API_BASE || "").trim();
-    if (byTemplate) return byTemplate;
+    // 本地直接開 index.html 時，template 不會被 Apps Script 轉換，
+    // 會留下原樣 "<?= apiBaseUrl ?>"，這不是合法 URL，fetch 會拋 NetworkError。
+    // 因此要先排除模板佔位字串，再決定是否採用。
+    if (byTemplate && !isTemplatePlaceholder(byTemplate)) return byTemplate;
 
     const u = new URL(window.location.href);
     const byQuery = (u.searchParams.get("api") || "").trim();
