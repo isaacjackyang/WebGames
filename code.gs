@@ -1,9 +1,9 @@
 /***********************
- * Blind Auction Party - Minimal Party Server (Google Sheet DB)
- * Code.gs (V3.2-fixed)
+ * Blind Auction Party - Complete Game Server (Google Sheet DB)
+ * Code.gs (V4.0 — full state machine)
  ***********************/
 
-const DB_SPREADSHEET_ID = "1IDUnxLtOWoPOS_ya_FMU3B5yMtjqUWe-NBA4dz9mPCk"; // 你的 DB 表 ID
+const DB_SPREADSHEET_ID = "1IDUnxLtOWoPOS_ya_FMU3B5yMtjqUWe-NBA4dz9mPCk";
 
 const TABS = {
   ROOMS: "Rooms",
@@ -13,13 +13,14 @@ const TABS = {
   CARDS: "PlayerCards"
 };
 
-const ROOM_ACTIVE_MS = 15 * 60 * 1000; // lobby 列表只顯示近 15 分鐘有更新的房間
+const ROOM_ACTIVE_MS = 15 * 60 * 1000;
+const REVEAL_DURATION_MS = 10 * 1000;
+const POSTROUND_DURATION_MS = 8 * 1000;
 
 function doGet(e) {
   const params = e && e.parameter ? e.parameter : {};
   const action = (params.action || "").trim();
 
-  // GET API
   if (action) {
     try {
       const out = handleApiGet_(action, params);
@@ -29,16 +30,11 @@ function doGet(e) {
     }
   }
 
-  // HTML page
-  // 使用 template 注入「真正可呼叫 API 的 Web App URL」。
-  // 原因：使用者瀏覽器中的 location 可能是 googleusercontent iframe URL，
-  // 若前端直接拿 location 當 API endpoint，常會打到 HTML 容器而不是 JSON API。
   const tpl = HtmlService.createTemplateFromFile("index");
   tpl.apiBaseUrl = ScriptApp.getService().getUrl();
 
   const html = tpl.evaluate()
     .setTitle("Blind Auction Party")
-    // 盡量避免 frame-ancestors / XFO 類問題影響行為（你貼的警告就是這類）
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 
   return html;
@@ -51,7 +47,6 @@ function doPost(e) {
     try {
       payload = body ? JSON.parse(body) : {};
     } catch (_) {
-      // 這裡硬回 JSON，避免前端 JSON.parse 爆掉
       return jsonOut_({ ok: false, error: "POST_BODY_NOT_JSON", bodyPreview: String(body).slice(0, 200) });
     }
 
@@ -73,8 +68,6 @@ function handleApiGet_(action, p) {
     case "debugInfo": return apiDebugInfo_();
     case "listLobbyRooms": return apiListLobbyRooms_(p);
     case "sync": return apiSync_(p);
-    // 某些部署環境下 POST 可能被導到 HTML（例如權限/iframe 流程），
-    // 前端會 fallback 成 GET，因此提供 GET 版 action 以提升容錯。
     case "setup": return apiSetup_();
     case "createRoom": return apiCreateRoom_(p);
     case "joinRoom": return apiJoinRoom_(p);
@@ -84,6 +77,7 @@ function handleApiGet_(action, p) {
     case "resolve": return apiResolve_(p);
     case "playCard": return apiPlayCard_(p);
     case "resetDatabase": return apiResetDatabase_(p);
+    case "nextRound": return apiNextRound_(p);
     default: return { ok: false, error: "UNKNOWN_GET_ACTION:" + action };
   }
 }
@@ -99,6 +93,7 @@ function handleApiPost_(action, body) {
     case "resolve": return apiResolve_(body);
     case "playCard": return apiPlayCard_(body);
     case "resetDatabase": return apiResetDatabase_(body);
+    case "nextRound": return apiNextRound_(body);
     default: return { ok: false, error: "UNKNOWN_POST_ACTION:" + action };
   }
 }
@@ -120,7 +115,6 @@ function jsonOut_(obj) {
 
 function apiOut_(obj, params) {
   const callback = String((params && params.callback) || "").trim();
-  // 提供 JSONP，讓跨網域靜態頁也能呼叫 Apps Script API（避免 fetch/CORS NetworkError）
   if (callback && /^[A-Za-z_$][A-Za-z0-9_$\.]{0,63}$/.test(callback)) {
     return ContentService
       .createTextOutput(callback + "(" + JSON.stringify(obj) + ");")
@@ -128,7 +122,6 @@ function apiOut_(obj, params) {
   }
   return jsonOut_(obj);
 }
-
 
 function clearSheetDataRows_(sh, width) {
   const last = sh.getLastRow();
@@ -139,19 +132,19 @@ function clearSheetDataRows_(sh, width) {
 function apiResetDatabase_(body) {
   const roomId = String(body.roomId || "").trim().toUpperCase();
   const hostToken = String(body.hostToken || "").trim();
-  if (!roomId) return { ok:false, error:"MISSING_ROOMID" };
-  if (!hostToken && !playerId) return { ok:false, error:"MISSING_HOST_CREDENTIAL" };
+  if (!roomId) return { ok: false, error: "MISSING_ROOMID" };
+  if (!hostToken) return { ok: false, error: "MISSING_HOST_CREDENTIAL" };
 
   return withLock_(() => {
     const ss = db_();
     const rooms = ss.getSheetByName(TABS.ROOMS);
     const idx = findRoomRow_(rooms, roomId);
-    if (idx < 0) return { ok:false, error:"ROOM_NOT_FOUND" };
+    if (idx < 0) return { ok: false, error: "ROOM_NOT_FOUND" };
 
-    const headers = rooms.getRange(1,1,1,rooms.getLastColumn()).getValues()[0];
+    const headers = rooms.getRange(1, 1, 1, rooms.getLastColumn()).getValues()[0];
     const im = idxMap_(headers);
     const row = getRow_(rooms, idx, rooms.getLastColumn());
-    if (String(row[im.hostToken]) !== hostToken) return { ok:false, error:"HOST_TOKEN_MISMATCH" };
+    if (String(row[im.hostToken]) !== hostToken) return { ok: false, error: "HOST_TOKEN_MISMATCH" };
 
     [TABS.ROOMS, TABS.PLAYERS, TABS.EVENTS, TABS.CARDS].forEach(name => {
       const sh = ss.getSheetByName(name);
@@ -162,17 +155,10 @@ function apiResetDatabase_(body) {
     const items = ss.getSheetByName(TABS.ITEMS);
     if (items) {
       clearSheetDataRows_(items, items.getLastColumn());
-      const seed = [
-        ["ITM1","神秘古董","看起來很值錢，但可能是垃圾", 30],
-        ["ITM2","限量公仔","大家都說會漲價", 25],
-        ["ITM3","二手筆電","螢幕有刮痕，但能用", 18],
-        ["ITM4","奇怪的箱子","搖一搖會響", 22],
-        ["ITM5","無敵券","規則外的力量感", 35]
-      ];
-      items.getRange(2,1,seed.length,4).setValues(seed);
+      seedItems_(items);
     }
 
-    return { ok:true };
+    return { ok: true };
   });
 }
 
@@ -185,12 +171,11 @@ function rid_(len) {
   return s;
 }
 
-
 function normalizeLobbyCode_(raw) {
   let s = String(raw || "").trim();
   if (!s) return "";
   s = s.replace(/\s+/g, "").replace(/[a-z]/g, c => c.toUpperCase());
-  return s.length >= 2 ? s.slice(0,16) : "";
+  return s.length >= 2 ? s.slice(0, 16) : "";
 }
 
 function newUniqueRoomId_(roomsSheet) {
@@ -216,12 +201,6 @@ function ensureSheet_(ss, name, headers) {
   return sh;
 }
 
-function sheet_(name) {
-  const ss = db_();
-  ss.toast("db ok", "server", 1);
-  return ss.getSheetByName(name) || ss.insertSheet(name);
-}
-
 function readAll_(sh) {
   const rng = sh.getDataRange();
   const values = rng.getValues();
@@ -244,7 +223,7 @@ function findRowIndex_(sh, colIndex, value) {
   if (last < 2) return -1;
   const vals = sh.getRange(2, colIndex + 1, last - 1, 1).getValues();
   for (let i = 0; i < vals.length; i++) {
-    if (String(vals[i][0]) === String(value)) return i + 2; // sheet row index
+    if (String(vals[i][0]) === String(value)) return i + 2;
   }
   return -1;
 }
@@ -255,6 +234,20 @@ function getRow_(sh, rowIndex, width) {
 
 function setRow_(sh, rowIndex, row) {
   sh.getRange(rowIndex, 1, 1, row.length).setValues([row]);
+}
+
+function seedItems_(itemsSheet) {
+  const seed = [
+    ["ITM1", "神秘古董", "看起來很值錢，但可能是垃圾", 30],
+    ["ITM2", "限量公仔", "大家都說會漲價", 25],
+    ["ITM3", "二手筆電", "螢幕有刮痕，但能用", 18],
+    ["ITM4", "奇怪的箱子", "搖一搖會響", 22],
+    ["ITM5", "無敵券", "規則外的力量感", 35],
+    ["ITM6", "金元寶", "閃閃發光的黃金", 40],
+    ["ITM7", "紅包", "裡面會放多少呢？", 15],
+    ["ITM8", "古董花瓶", "據說是明朝的…", 28]
+  ];
+  itemsSheet.getRange(2, 1, seed.length, 4).setValues(seed);
 }
 
 /***************
@@ -269,45 +262,40 @@ function apiSetup_() {
     const ss = db_();
 
     ensureSheet_(ss, TABS.ROOMS, [
-      "roomId","lobbyCode","createdAt","updatedAt","state","round","maxRounds","roundSeconds","startingBudget","hostToken","bidDeadlineTs","itemId"
+      "roomId", "lobbyCode", "createdAt", "updatedAt", "state", "round", "maxRounds",
+      "roundSeconds", "startingBudget", "hostToken", "bidDeadlineTs", "itemId",
+      "revealUntilTs", "postUntilTs"
     ]);
 
     ensureSheet_(ss, TABS.PLAYERS, [
-      "roomId","playerId","name","isHost","budget","score","joinedAt","updatedAt"
+      "roomId", "playerId", "name", "isHost", "budget", "score", "joinedAt", "updatedAt"
     ]);
 
     ensureSheet_(ss, TABS.EVENTS, [
-      "roomId","eventId","ts","type","playerId","payloadJson"
+      "roomId", "eventId", "ts", "type", "playerId", "payloadJson"
     ]);
 
     ensureSheet_(ss, TABS.ITEMS, [
-      "itemId","name","publicHint","hiddenValue"
+      "itemId", "name", "publicHint", "hiddenValue"
     ]);
 
     ensureSheet_(ss, TABS.CARDS, [
-      "roomId","playerId","cardId","name","desc","count"
+      "roomId", "playerId", "cardId", "name", "desc", "count"
     ]);
 
     // seed items if empty
     const items = ss.getSheetByName(TABS.ITEMS);
     if (items.getLastRow() < 2) {
-      const seed = [
-        ["ITM1","神秘古董","看起來很值錢，但可能是垃圾", 30],
-        ["ITM2","限量公仔","大家都說會漲價", 25],
-        ["ITM3","二手筆電","螢幕有刮痕，但能用", 18],
-        ["ITM4","奇怪的箱子","搖一搖會響", 22],
-        ["ITM5","無敵券","規則外的力量感", 35]
-      ];
-      items.getRange(2,1,seed.length,4).setValues(seed);
+      seedItems_(items);
     }
 
-    return { ok:true };
+    return { ok: true };
   });
 }
 
 function apiDebugInfo_() {
   const ss = db_();
-  return { ok:true, info:{ name:ss.getName(), id:ss.getId(), url:ss.getUrl(), time:new Date().toISOString() } };
+  return { ok: true, info: { name: ss.getName(), id: ss.getId(), url: ss.getUrl(), time: new Date().toISOString() } };
 }
 
 /***************
@@ -315,7 +303,7 @@ function apiDebugInfo_() {
  ***************/
 function apiCreateRoom_(body) {
   const lobbyCode = normalizeLobbyCode_(body.lobbyCode);
-  if (!lobbyCode) return { ok:false, error:"MISSING_LOBBYCODE" };
+  if (!lobbyCode) return { ok: false, error: "MISSING_LOBBYCODE" };
 
   return withLock_(() => {
     const ss = db_();
@@ -328,20 +316,21 @@ function apiCreateRoom_(body) {
     appendRow_(rooms, [
       roomId, lobbyCode, t, t,
       "LOBBY", 0, 8, 25, 100,
-      hostToken, "", ""
+      hostToken, "", "",
+      "", ""  // revealUntilTs, postUntilTs
     ]);
 
     addEvent_(roomId, "ROOM_CREATED", "", { lobbyCode });
 
-    return { ok:true, roomId, hostToken };
+    return { ok: true, roomId, hostToken };
   });
 }
 
 function apiJoinRoom_(body) {
   const roomId = String(body.roomId || "").trim();
   const name = String(body.name || "").trim().slice(0, 18);
-  if (!roomId) return { ok:false, error:"MISSING_ROOMID" };
-  if (!name) return { ok:false, error:"MISSING_NAME" };
+  if (!roomId) return { ok: false, error: "MISSING_ROOMID" };
+  if (!name) return { ok: false, error: "MISSING_NAME" };
 
   return withLock_(() => {
     const ss = db_();
@@ -349,10 +338,9 @@ function apiJoinRoom_(body) {
     const players = ss.getSheetByName(TABS.PLAYERS);
 
     const roomRowIndex = findRoomRow_(rooms, roomId);
-    if (roomRowIndex < 0) return { ok:false, error:"ROOM_NOT_FOUND" };
+    if (roomRowIndex < 0) return { ok: false, error: "ROOM_NOT_FOUND" };
 
     const t = nowMs_();
-    // count players in this room
     const { headers, rows } = readAll_(players);
     const im = idxMap_(headers);
     let count = 0;
@@ -360,10 +348,10 @@ function apiJoinRoom_(body) {
 
     const playerId = newUniquePlayerId_(rows, im);
     const roomRow = getRow_(rooms, roomRowIndex, rooms.getLastColumn());
-    const roomHeaders = rooms.getRange(1,1,1,rooms.getLastColumn()).getValues()[0];
+    const roomHeaders = rooms.getRange(1, 1, 1, rooms.getLastColumn()).getValues()[0];
     const rim = idxMap_(roomHeaders);
 
-    const isHost = (count === 0); // 第一個加入的人視為 host（配合 createRoom 後立刻 join）
+    const isHost = (count === 0);
     const startingBudget = Number(roomRow[rim.startingBudget] || 100);
 
     appendRow_(players, [
@@ -371,22 +359,20 @@ function apiJoinRoom_(body) {
       startingBudget, 0, t, t
     ]);
 
-    // seed cards for this player
     seedCards_(ss, roomId, playerId);
 
-    // update room updatedAt
     roomRow[rim.updatedAt] = t;
     setRow_(rooms, roomRowIndex, roomRow);
 
     addEvent_(roomId, "PLAYER_JOINED", playerId, { name, isHost });
 
-    return { ok:true, playerId };
+    return { ok: true, playerId };
   });
 }
 
 function apiListLobbyRooms_(p) {
   const lobbyCode = normalizeLobbyCode_(p.lobbyCode);
-  if (!lobbyCode) return { ok:false, error:"MISSING_LOBBYCODE" };
+  if (!lobbyCode) return { ok: false, error: "MISSING_LOBBYCODE" };
 
   const ss = db_();
   const rooms = ss.getSheetByName(TABS.ROOMS);
@@ -419,16 +405,22 @@ function apiListLobbyRooms_(p) {
     });
   });
 
-  return { ok:true, rooms: out };
+  return { ok: true, rooms: out };
 }
 
+/***************
+ * Sync — with auto state transitions
+ ***************/
 function apiSync_(p) {
   const roomId = String(p.roomId || "").trim().toUpperCase();
   const sinceEventId = Number(p.sinceEventId || 0);
   const playerId = String(p.playerId || "").trim();
   const hostToken = String(p.hostToken || "").trim();
 
-  if (!roomId) return { ok:false, error:"MISSING_ROOMID" };
+  if (!roomId) return { ok: false, error: "MISSING_ROOMID" };
+
+  // Try auto-transitions (needs lock)
+  tryAutoTransition_(roomId);
 
   const ss = db_();
   const rooms = ss.getSheetByName(TABS.ROOMS);
@@ -438,9 +430,9 @@ function apiSync_(p) {
   const cards = ss.getSheetByName(TABS.CARDS);
 
   const roomRowIndex = findRoomRow_(rooms, roomId);
-  if (roomRowIndex < 0) return { ok:false, error:"ROOM_NOT_FOUND" };
+  if (roomRowIndex < 0) return { ok: false, error: "ROOM_NOT_FOUND" };
 
-  const roomHeaders = rooms.getRange(1,1,1,rooms.getLastColumn()).getValues()[0];
+  const roomHeaders = rooms.getRange(1, 1, 1, rooms.getLastColumn()).getValues()[0];
   const rim = idxMap_(roomHeaders);
   const rr = getRow_(rooms, roomRowIndex, rooms.getLastColumn());
 
@@ -449,7 +441,15 @@ function apiSync_(p) {
   const itemId = String(rr[rim.itemId] || "");
   if (itemId) {
     const it = findItem_(items, itemId);
-    if (it) item = it;
+    if (it) {
+      // Only expose public info (not hiddenValue) unless in REVEAL/POSTROUND/ENDED
+      const state = String(rr[rim.state]);
+      if (state === "REVEAL" || state === "POSTROUND" || state === "ENDED") {
+        item = it;
+      } else {
+        item = { itemId: it.itemId, name: it.name, publicHint: it.publicHint };
+      }
+    }
   }
 
   const room = {
@@ -461,6 +461,8 @@ function apiSync_(p) {
     roundSeconds: Number(rr[rim.roundSeconds] || 25),
     startingBudget: Number(rr[rim.startingBudget] || 100),
     bidDeadlineTs: Number(rr[rim.bidDeadlineTs] || 0),
+    revealUntilTs: Number(rr[rim.revealUntilTs] || 0),
+    postUntilTs: Number(rr[rim.postUntilTs] || 0),
     item
   };
 
@@ -495,28 +497,288 @@ function apiSync_(p) {
     });
   });
 
+  // Peek card check: if player used Peek this round, show hiddenValue hint
+  let peekHint = null;
+  if (room.state === "BIDDING" && playerId && room.item) {
+    const round = room.round;
+    const eAll = readAll_(events);
+    const eim = idxMap_(eAll.headers);
+    for (const er of eAll.rows) {
+      if (String(er[eim.roomId]) !== roomId) continue;
+      if (String(er[eim.type]) !== "CARD_PLAYED") continue;
+      if (String(er[eim.playerId]) !== playerId) continue;
+      let payload = {};
+      try { payload = JSON.parse(String(er[eim.payloadJson] || "{}")); } catch (_) { }
+      if (Number(payload.round) === round && payload.cardId === "C1") {
+        // Peek: show ±5 range
+        const fullItem = findItem_(items, itemId);
+        if (fullItem) {
+          const hv = fullItem.hiddenValue;
+          peekHint = { min: Math.max(0, hv - 5), max: hv + 5 };
+        }
+        break;
+      }
+    }
+  }
+
   // events incremental
-  const eAll = readAll_(events);
-  const eim = idxMap_(eAll.headers);
+  const eAll2 = readAll_(events);
+  const eim2 = idxMap_(eAll2.headers);
   const evs = [];
-  eAll.rows.forEach(er => {
-    if (String(er[eim.roomId]) !== roomId) return;
-    const eid = Number(er[eim.eventId] || 0);
+  eAll2.rows.forEach(er => {
+    if (String(er[eim2.roomId]) !== roomId) return;
+    const eid = Number(er[eim2.eventId] || 0);
     if (eid <= sinceEventId) return;
     evs.push({
       roomId,
       eventId: eid,
-      ts: Number(er[eim.ts] || 0),
-      type: String(er[eim.type]),
-      playerId: String(er[eim.playerId] || ""),
-      payloadJson: String(er[eim.payloadJson] || "{}")
+      ts: Number(er[eim2.ts] || 0),
+      type: String(er[eim2.type]),
+      playerId: String(er[eim2.playerId] || ""),
+      payloadJson: String(er[eim2.payloadJson] || "{}")
     });
   });
 
-  // host check
+  // Find latest ROUND_RESOLVED for current or last round
+  let resolveResult = null;
+  for (let i = evs.length - 1; i >= 0; i--) {
+    if (evs[i].type === "ROUND_RESOLVED") {
+      try { resolveResult = JSON.parse(evs[i].payloadJson); } catch (_) { }
+      break;
+    }
+  }
+  // Also search in older events if not found
+  if (!resolveResult && (room.state === "REVEAL" || room.state === "POSTROUND")) {
+    eAll2.rows.forEach(er => {
+      if (String(er[eim2.roomId]) !== roomId) return;
+      if (String(er[eim2.type]) !== "ROUND_RESOLVED") return;
+      try {
+        const p = JSON.parse(String(er[eim2.payloadJson] || "{}"));
+        if (Number(p.round) === room.round) resolveResult = p;
+      } catch (_) { }
+    });
+  }
+
+  // Check current player's bid for this round
+  let myBid = null;
+  if (room.state === "BIDDING" && playerId) {
+    eAll2.rows.forEach(er => {
+      if (String(er[eim2.roomId]) !== roomId) return;
+      if (String(er[eim2.type]) !== "BID") return;
+      if (String(er[eim2.playerId]) !== playerId) return;
+      let payload = {};
+      try { payload = JSON.parse(String(er[eim2.payloadJson] || "{}")); } catch (_) { }
+      if (Number(payload.round) === room.round) {
+        myBid = Number(payload.bid || 0);
+      }
+    });
+  }
+
   const isHost = hostToken && (hostToken === String(rr[rim.hostToken]));
 
-  return { ok:true, room, players: plist, myCards, events: evs, isHost };
+  return { ok: true, room, players: plist, myCards, events: evs, isHost, resolveResult, peekHint, myBid };
+}
+
+/***************
+ * Auto state transitions (time-driven)
+ ***************/
+function tryAutoTransition_(roomId) {
+  return withLock_(() => {
+    const ss = db_();
+    const rooms = ss.getSheetByName(TABS.ROOMS);
+    const idx = findRoomRow_(rooms, roomId);
+    if (idx < 0) return;
+
+    const headers = rooms.getRange(1, 1, 1, rooms.getLastColumn()).getValues()[0];
+    const rim = idxMap_(headers);
+    const r = getRow_(rooms, idx, rooms.getLastColumn());
+    const state = String(r[rim.state]);
+    const now = nowMs_();
+
+    // BIDDING → REVEAL (auto-resolve when deadline passed)
+    if (state === "BIDDING") {
+      const deadline = Number(r[rim.bidDeadlineTs] || 0);
+      if (deadline > 0 && now >= deadline) {
+        doResolve_(ss, rooms, idx, r, rim, roomId);
+        return;
+      }
+    }
+
+    // REVEAL → POSTROUND
+    if (state === "REVEAL") {
+      const revealUntil = Number(r[rim.revealUntilTs] || 0);
+      if (revealUntil > 0 && now >= revealUntil) {
+        const round = Number(r[rim.round] || 0);
+        const maxRounds = Number(r[rim.maxRounds] || 8);
+        if (round >= maxRounds) {
+          r[rim.state] = "ENDED";
+          r[rim.postUntilTs] = "";
+          addEvent_(roomId, "GAME_ENDED", "", { round });
+        } else {
+          r[rim.state] = "POSTROUND";
+          r[rim.postUntilTs] = now + POSTROUND_DURATION_MS;
+          addEvent_(roomId, "STATE_TRANSITION", "", { from: "REVEAL", to: "POSTROUND" });
+        }
+        r[rim.updatedAt] = now;
+        setRow_(rooms, idx, r);
+        return;
+      }
+    }
+
+    // POSTROUND → LOBBY
+    if (state === "POSTROUND") {
+      const postUntil = Number(r[rim.postUntilTs] || 0);
+      if (postUntil > 0 && now >= postUntil) {
+        r[rim.state] = "LOBBY";
+        r[rim.itemId] = "";
+        r[rim.bidDeadlineTs] = "";
+        r[rim.revealUntilTs] = "";
+        r[rim.postUntilTs] = "";
+        r[rim.updatedAt] = now;
+        setRow_(rooms, idx, r);
+        addEvent_(roomId, "STATE_TRANSITION", "", { from: "POSTROUND", to: "LOBBY" });
+        return;
+      }
+    }
+  });
+}
+
+/***************
+ * Core resolve logic (shared by manual and auto)
+ ***************/
+function doResolve_(ss, rooms, idx, r, rim, roomId) {
+  const players = ss.getSheetByName(TABS.PLAYERS);
+  const events = ss.getSheetByName(TABS.EVENTS);
+  const items = ss.getSheetByName(TABS.ITEMS);
+  const cards = ss.getSheetByName(TABS.CARDS);
+
+  const round = Number(r[rim.round] || 0);
+  const itemId = String(r[rim.itemId] || "");
+  const item = itemId ? findItem_(items, itemId) : null;
+  const hiddenValue = item ? Number(item.hiddenValue || 0) : 0;
+
+  // read players
+  const pAll = readAll_(players);
+  const pim = idxMap_(pAll.headers);
+
+  const pIndexById = {};
+  pAll.rows.forEach((pr, i) => {
+    if (String(pr[pim.roomId]) !== roomId) return;
+    pIndexById[String(pr[pim.playerId])] = i + 2;
+  });
+
+  // gather latest bid per player for this round
+  const eAll = readAll_(events);
+  const eim = idxMap_(eAll.headers);
+  const lastBid = {};
+  const cardPlayed = {}; // playerId -> [cardId, ...]
+  eAll.rows.forEach(er => {
+    if (String(er[eim.roomId]) !== roomId) return;
+    const type = String(er[eim.type]);
+    const pid = String(er[eim.playerId] || "");
+    let payload = {};
+    try { payload = JSON.parse(String(er[eim.payloadJson] || "{}")); } catch (_) { }
+
+    if (type === "BID" && Number(payload.round) === round) {
+      lastBid[pid] = Number(payload.bid || 0);
+    }
+    if (type === "CARD_PLAYED" && Number(payload.round) === round) {
+      if (!cardPlayed[pid]) cardPlayed[pid] = [];
+      cardPlayed[pid].push(String(payload.cardId || ""));
+    }
+  });
+
+  // find winner: highest bid that <= budget
+  let winnerId = "";
+  let winnerBid = -1;
+
+  Object.keys(lastBid).forEach(pid => {
+    const bid = Number(lastBid[pid]);
+    const prowIdx = pIndexById[pid];
+    if (!prowIdx) return;
+
+    const row = getRow_(players, prowIdx, players.getLastColumn());
+    const budget = Number(row[pim.budget] || 0);
+    if (bid > budget) return;
+    if (bid > winnerBid) { winnerBid = bid; winnerId = pid; }
+  });
+
+  // Apply Tax card: winner pays 20% more
+  let actualCost = winnerBid;
+  let taxApplied = false;
+  if (winnerId && cardPlayed[winnerId] && cardPlayed[winnerId].includes("C2")) {
+    actualCost = Math.ceil(winnerBid * 1.2);
+    taxApplied = true;
+  }
+
+  // Calculate score deltas for all players
+  const deltas = {};
+  let winnerName = "";
+
+  if (winnerId) {
+    const prowIdx = pIndexById[winnerId];
+    const row = getRow_(players, prowIdx, players.getLastColumn());
+    const budget = Number(row[pim.budget] || 0);
+    const score = Number(row[pim.score] || 0);
+    winnerName = String(row[pim.name] || "");
+
+    let delta = hiddenValue - actualCost;
+
+    // Apply Shield card: if delta < 0 and winner has Shield, clamp to 0
+    let shieldApplied = false;
+    if (delta < 0 && cardPlayed[winnerId] && cardPlayed[winnerId].includes("C3")) {
+      delta = 0;
+      shieldApplied = true;
+    }
+
+    deltas[winnerId] = { delta, shieldApplied, taxApplied };
+
+    row[pim.budget] = budget - actualCost;
+    row[pim.score] = score + delta;
+    row[pim.updatedAt] = nowMs_();
+    setRow_(players, prowIdx, row);
+  }
+
+  const now = nowMs_();
+  // Transition to REVEAL
+  r[rim.state] = "REVEAL";
+  r[rim.revealUntilTs] = now + REVEAL_DURATION_MS;
+  r[rim.bidDeadlineTs] = "";
+  r[rim.updatedAt] = now;
+  setRow_(rooms, idx, r);
+
+  addEvent_(roomId, "ROUND_RESOLVED", "", {
+    round, winnerId, winnerName, winnerBid, actualCost,
+    hiddenValue, deltas, taxApplied,
+    itemName: item ? item.name : ""
+  });
+}
+
+function apiResolve_(body) {
+  const roomId = String(body.roomId || "").trim().toUpperCase();
+  const hostToken = String(body.hostToken || "").trim();
+  const playerId = String(body.playerId || "").trim();
+  if (!roomId) return { ok: false, error: "MISSING_ROOMID" };
+  if (!hostToken && !playerId) return { ok: false, error: "MISSING_HOST_CREDENTIAL" };
+
+  return withLock_(() => {
+    const ss = db_();
+    const rooms = ss.getSheetByName(TABS.ROOMS);
+
+    const idx = findRoomRow_(rooms, roomId);
+    if (idx < 0) return { ok: false, error: "ROOM_NOT_FOUND" };
+
+    const headers = rooms.getRange(1, 1, 1, rooms.getLastColumn()).getValues()[0];
+    const rim = idxMap_(headers);
+    const r = getRow_(rooms, idx, rooms.getLastColumn());
+
+    if (!canManageRoom_(ss, roomId, hostToken, playerId, r, rim)) return { ok: false, error: "HOST_PERMISSION_DENIED" };
+    if (String(r[rim.state]) !== "BIDDING") return { ok: false, error: "NOT_IN_BIDDING" };
+
+    doResolve_(ss, rooms, idx, r, rim, roomId);
+
+    return { ok: true };
+  });
 }
 
 function apiUpdateSettings_(body) {
@@ -527,21 +789,21 @@ function apiUpdateSettings_(body) {
   const roundSeconds = Number(body.roundSeconds || 25);
   const maxRounds = Number(body.maxRounds || 8);
 
-  if (!roomId) return { ok:false, error:"MISSING_ROOMID" };
-  if (!hostToken && !playerId) return { ok:false, error:"MISSING_HOST_CREDENTIAL" };
+  if (!roomId) return { ok: false, error: "MISSING_ROOMID" };
+  if (!hostToken && !playerId) return { ok: false, error: "MISSING_HOST_CREDENTIAL" };
 
   return withLock_(() => {
     const ss = db_();
     const rooms = ss.getSheetByName(TABS.ROOMS);
 
     const idx = findRoomRow_(rooms, roomId);
-    if (idx < 0) return { ok:false, error:"ROOM_NOT_FOUND" };
+    if (idx < 0) return { ok: false, error: "ROOM_NOT_FOUND" };
 
-    const headers = rooms.getRange(1,1,1,rooms.getLastColumn()).getValues()[0];
+    const headers = rooms.getRange(1, 1, 1, rooms.getLastColumn()).getValues()[0];
     const im = idxMap_(headers);
     const r = getRow_(rooms, idx, rooms.getLastColumn());
 
-    if (!canManageRoom_(ss, roomId, hostToken, playerId, r, im)) return { ok:false, error:"HOST_PERMISSION_DENIED" };
+    if (!canManageRoom_(ss, roomId, hostToken, playerId, r, im)) return { ok: false, error: "HOST_PERMISSION_DENIED" };
 
     const t = nowMs_();
     r[im.startingBudget] = startingBudget;
@@ -551,7 +813,7 @@ function apiUpdateSettings_(body) {
     setRow_(rooms, idx, r);
 
     addEvent_(roomId, "SETTINGS_UPDATED", "", { startingBudget, roundSeconds, maxRounds });
-    return { ok:true };
+    return { ok: true };
   });
 }
 
@@ -559,8 +821,8 @@ function apiStartRound_(body) {
   const roomId = String(body.roomId || "").trim().toUpperCase();
   const hostToken = String(body.hostToken || "").trim();
   const playerId = String(body.playerId || "").trim();
-  if (!roomId) return { ok:false, error:"MISSING_ROOMID" };
-  if (!hostToken && !playerId) return { ok:false, error:"MISSING_HOST_CREDENTIAL" };
+  if (!roomId) return { ok: false, error: "MISSING_ROOMID" };
+  if (!hostToken && !playerId) return { ok: false, error: "MISSING_HOST_CREDENTIAL" };
 
   return withLock_(() => {
     const ss = db_();
@@ -568,20 +830,23 @@ function apiStartRound_(body) {
     const items = ss.getSheetByName(TABS.ITEMS);
 
     const idx = findRoomRow_(rooms, roomId);
-    if (idx < 0) return { ok:false, error:"ROOM_NOT_FOUND" };
+    if (idx < 0) return { ok: false, error: "ROOM_NOT_FOUND" };
 
-    const headers = rooms.getRange(1,1,1,rooms.getLastColumn()).getValues()[0];
+    const headers = rooms.getRange(1, 1, 1, rooms.getLastColumn()).getValues()[0];
     const im = idxMap_(headers);
     const r = getRow_(rooms, idx, rooms.getLastColumn());
 
-    if (!canManageRoom_(ss, roomId, hostToken, playerId, r, im)) return { ok:false, error:"HOST_PERMISSION_DENIED" };
+    if (!canManageRoom_(ss, roomId, hostToken, playerId, r, im)) return { ok: false, error: "HOST_PERMISSION_DENIED" };
+
+    const state = String(r[im.state]);
+    if (state !== "LOBBY" && state !== "POSTROUND") return { ok: false, error: "NOT_IN_LOBBY_OR_POSTROUND" };
 
     const round = Number(r[im.round] || 0) + 1;
     const maxRounds = Number(r[im.maxRounds] || 8);
-    if (round > maxRounds) return { ok:false, error:"MAX_ROUNDS_REACHED" };
+    if (round > maxRounds) return { ok: false, error: "MAX_ROUNDS_REACHED" };
 
     const it = pickRandomItem_(items);
-    if (!it) return { ok:false, error:"NO_ITEMS" };
+    if (!it) return { ok: false, error: "NO_ITEMS" };
 
     const roundSeconds = Number(r[im.roundSeconds] || 25);
     const deadline = nowMs_() + Math.max(5, roundSeconds) * 1000;
@@ -590,12 +855,19 @@ function apiStartRound_(body) {
     r[im.state] = "BIDDING";
     r[im.itemId] = it.itemId;
     r[im.bidDeadlineTs] = deadline;
+    r[im.revealUntilTs] = "";
+    r[im.postUntilTs] = "";
     r[im.updatedAt] = nowMs_();
     setRow_(rooms, idx, r);
 
-    addEvent_(roomId, "ROUND_STARTED", "", { round, itemId: it.itemId, publicHint: it.publicHint, deadline });
-    return { ok:true };
+    addEvent_(roomId, "ROUND_STARTED", "", { round, itemId: it.itemId, itemName: it.name, publicHint: it.publicHint, deadline });
+    return { ok: true };
   });
+}
+
+function apiNextRound_(body) {
+  // Host manually triggers next round from POSTROUND
+  return apiStartRound_(body);
 }
 
 function apiBid_(body) {
@@ -604,110 +876,15 @@ function apiBid_(body) {
   const round = Number(body.round || 0);
   const bid = Number(body.bid || 0);
 
-  if (!roomId) return { ok:false, error:"MISSING_ROOMID" };
-  if (!playerId) return { ok:false, error:"MISSING_PLAYERID" };
-  if (!Number.isFinite(round) || round <= 0) return { ok:false, error:"BAD_ROUND" };
-  if (!Number.isFinite(bid) || bid < 0) return { ok:false, error:"BAD_BID" };
+  if (!roomId) return { ok: false, error: "MISSING_ROOMID" };
+  if (!playerId) return { ok: false, error: "MISSING_PLAYERID" };
+  if (!Number.isFinite(round) || round <= 0) return { ok: false, error: "BAD_ROUND" };
+  if (!Number.isFinite(bid) || bid < 0) return { ok: false, error: "BAD_BID" };
 
   return withLock_(() => {
-    // 只記事件，結算再算
     addEvent_(roomId, "BID", playerId, { round, bid });
     touchRoomUpdatedAt_(roomId);
-    return { ok:true };
-  });
-}
-
-function apiResolve_(body) {
-  const roomId = String(body.roomId || "").trim().toUpperCase();
-  const hostToken = String(body.hostToken || "").trim();
-  const playerId = String(body.playerId || "").trim();
-  if (!roomId) return { ok:false, error:"MISSING_ROOMID" };
-  if (!hostToken && !playerId) return { ok:false, error:"MISSING_HOST_CREDENTIAL" };
-
-  return withLock_(() => {
-    const ss = db_();
-    const rooms = ss.getSheetByName(TABS.ROOMS);
-    const players = ss.getSheetByName(TABS.PLAYERS);
-    const events = ss.getSheetByName(TABS.EVENTS);
-    const items = ss.getSheetByName(TABS.ITEMS);
-
-    const idx = findRoomRow_(rooms, roomId);
-    if (idx < 0) return { ok:false, error:"ROOM_NOT_FOUND" };
-
-    const headers = rooms.getRange(1,1,1,rooms.getLastColumn()).getValues()[0];
-    const rim = idxMap_(headers);
-    const r = getRow_(rooms, idx, rooms.getLastColumn());
-
-    if (!canManageRoom_(ss, roomId, hostToken, playerId, r, rim)) return { ok:false, error:"HOST_PERMISSION_DENIED" };
-    if (String(r[rim.state]) !== "BIDDING") return { ok:false, error:"NOT_IN_BIDDING" };
-
-    const round = Number(r[rim.round] || 0);
-    const itemId = String(r[rim.itemId] || "");
-    const item = itemId ? findItem_(items, itemId) : null;
-    const hiddenValue = item ? Number(item.hiddenValue || 0) : 0;
-
-    // read players
-    const pAll = readAll_(players);
-    const pim = idxMap_(pAll.headers);
-
-    // build budget map
-    const pIndexById = {};
-    pAll.rows.forEach((pr, i) => {
-      if (String(pr[pim.roomId]) !== roomId) return;
-      pIndexById[String(pr[pim.playerId])] = i + 2; // sheet row index
-    });
-
-    // gather latest bid per player for this round
-    const eAll = readAll_(events);
-    const eim = idxMap_(eAll.headers);
-    const lastBid = {}; // playerId -> bid
-    eAll.rows.forEach(er => {
-      if (String(er[eim.roomId]) !== roomId) return;
-      if (String(er[eim.type]) !== "BID") return;
-      const pid = String(er[eim.playerId] || "");
-      let payload = {};
-      try { payload = JSON.parse(String(er[eim.payloadJson] || "{}")); } catch(_){}
-      if (Number(payload.round) !== round) return;
-      lastBid[pid] = Number(payload.bid || 0);
-    });
-
-    // find winner: highest bid that <= budget
-    let winnerId = "";
-    let winnerBid = -1;
-
-    Object.keys(lastBid).forEach(pid => {
-      const bid = Number(lastBid[pid]);
-      const prowIdx = pIndexById[pid];
-      if (!prowIdx) return;
-
-      const row = getRow_(players, prowIdx, players.getLastColumn());
-      const budget = Number(row[pim.budget] || 0);
-      if (bid > budget) return;
-      if (bid > winnerBid) { winnerBid = bid; winnerId = pid; }
-    });
-
-    if (winnerId) {
-      const prowIdx = pIndexById[winnerId];
-      const row = getRow_(players, prowIdx, players.getLastColumn());
-      const budget = Number(row[pim.budget] || 0);
-      const score = Number(row[pim.score] || 0);
-
-      row[pim.budget] = budget - winnerBid;
-      row[pim.score] = score + (hiddenValue - winnerBid);
-      row[pim.updatedAt] = nowMs_();
-      setRow_(players, prowIdx, row);
-    }
-
-    // set state back to LOBBY
-    r[rim.state] = "LOBBY";
-    r[rim.itemId] = "";
-    r[rim.bidDeadlineTs] = "";
-    r[rim.updatedAt] = nowMs_();
-    setRow_(rooms, idx, r);
-
-    addEvent_(roomId, "ROUND_RESOLVED", "", { round, winnerId, winnerBid, hiddenValue });
-
-    return { ok:true, winnerId, winnerBid, hiddenValue };
+    return { ok: true };
   });
 }
 
@@ -717,9 +894,9 @@ function apiPlayCard_(body) {
   const round = Number(body.round || 0);
   const cardId = String(body.cardId || "").trim();
 
-  if (!roomId) return { ok:false, error:"MISSING_ROOMID" };
-  if (!playerId) return { ok:false, error:"MISSING_PLAYERID" };
-  if (!cardId) return { ok:false, error:"MISSING_CARDID" };
+  if (!roomId) return { ok: false, error: "MISSING_ROOMID" };
+  if (!playerId) return { ok: false, error: "MISSING_PLAYERID" };
+  if (!cardId) return { ok: false, error: "MISSING_CARDID" };
 
   return withLock_(() => {
     const ss = db_();
@@ -728,7 +905,6 @@ function apiPlayCard_(body) {
     const all = readAll_(cards);
     const im = idxMap_(all.headers);
 
-    // find card row
     for (let i = 0; i < all.rows.length; i++) {
       const r = all.rows[i];
       if (String(r[im.roomId]) !== roomId) continue;
@@ -738,16 +914,16 @@ function apiPlayCard_(body) {
       const sheetRow = i + 2;
       const row = getRow_(cards, sheetRow, cards.getLastColumn());
       const cnt = Number(row[im.count] || 0);
-      if (cnt <= 0) return { ok:false, error:"CARD_EMPTY" };
+      if (cnt <= 0) return { ok: false, error: "CARD_EMPTY" };
       row[im.count] = cnt - 1;
       setRow_(cards, sheetRow, row);
 
       addEvent_(roomId, "CARD_PLAYED", playerId, { round, cardId });
       touchRoomUpdatedAt_(roomId);
-      return { ok:true };
+      return { ok: true };
     }
 
-    return { ok:false, error:"CARD_NOT_FOUND" };
+    return { ok: false, error: "CARD_NOT_FOUND" };
   });
 }
 
@@ -774,7 +950,6 @@ function canManageRoom_(ss, roomId, hostToken, playerId, roomRow, roomIndexMap) 
 }
 
 function findRoomRow_(roomsSheet, roomId) {
-  // Rooms 的 roomId 是第 1 欄
   return findRowIndex_(roomsSheet, 0, roomId);
 }
 
@@ -786,7 +961,7 @@ function addEvent_(roomId, type, playerId, payloadObj) {
   const lastRow = events.getLastRow();
   let nextId = 1;
   if (lastRow >= 2) {
-    const lastVal = Number(events.getRange(lastRow, 2).getValue() || 0); // eventId col
+    const lastVal = Number(events.getRange(lastRow, 2).getValue() || 0);
     nextId = lastVal + 1;
   }
 
@@ -800,7 +975,7 @@ function touchRoomUpdatedAt_(roomId) {
   const rooms = ss.getSheetByName(TABS.ROOMS);
   const idx = findRoomRow_(rooms, roomId);
   if (idx < 0) return;
-  const headers = rooms.getRange(1,1,1,rooms.getLastColumn()).getValues()[0];
+  const headers = rooms.getRange(1, 1, 1, rooms.getLastColumn()).getValues()[0];
   const im = idxMap_(headers);
   const r = getRow_(rooms, idx, rooms.getLastColumn());
   r[im.updatedAt] = nowMs_();
@@ -839,13 +1014,31 @@ function findItem_(itemsSheet, itemId) {
 
 function seedCards_(ss, roomId, playerId) {
   const cards = ss.getSheetByName(TABS.CARDS);
-  // 一人三張卡，先給最簡化示例
   const seed = [
-    [roomId, playerId, "C1", "加倍迷惑", "讓提示文字更混亂（目前只記錄事件）", 1],
-    [roomId, playerId, "C2", "假出價", "丟一個假 bid（目前只記錄事件）", 1],
-    [roomId, playerId, "C3", "護盾", "抵銷一次負分（目前只記錄事件）", 1]
+    [roomId, playerId, "C1", "偷看 Peek", "窺探物品真實價值的區間（±5）", 1],
+    [roomId, playerId, "C2", "加稅 Tax", "若你得標，多付 20%（心理戰用）", 1],
+    [roomId, playerId, "C3", "護盾 Shield", "本回合若你分數為負，抵消一次", 1]
   ];
-  cards.getRange(cards.getLastRow()+1, 1, seed.length, 6).setValues(seed);
+  cards.getRange(cards.getLastRow() + 1, 1, seed.length, 6).setValues(seed);
+}
+
+function newUniquePlayerId_(playerRows, playerIndexMap) {
+  const used = new Set();
+  playerRows.forEach(r => {
+    const pid = String(r[playerIndexMap.playerId] || "").trim();
+    if (pid) used.add(pid);
+  });
+
+  for (let i = 0; i < 20; i++) {
+    const id = "P" + rid_(6);
+    if (!used.has(id)) return id;
+  }
+
+  let fallback = "P" + rid_(6) + String(nowMs_()).slice(-4);
+  while (used.has(fallback)) {
+    fallback = "P" + rid_(6) + String(nowMs_()).slice(-4);
+  }
+  return fallback;
 }
 
 /***************
@@ -853,7 +1046,7 @@ function seedCards_(ss, roomId, playerId) {
  ***************/
 function showBindingInfo() {
   const ss = db_();
-  const info = { name:ss.getName(), id:ss.getId(), url:ss.getUrl(), time:new Date().toISOString() };
+  const info = { name: ss.getName(), id: ss.getId(), url: ss.getUrl(), time: new Date().toISOString() };
 
   const sheetName = "__DEBUG__";
   let sh = ss.getSheetByName(sheetName);
@@ -867,25 +1060,4 @@ function showBindingInfo() {
 
   console.log("DB_INFO=" + JSON.stringify(info));
   return info;
-}
-
-function newUniquePlayerId_(playerRows, playerIndexMap) {
-  const used = new Set();
-  playerRows.forEach(r => {
-    const pid = String(r[playerIndexMap.playerId] || "").trim();
-    if (pid) used.add(pid);
-  });
-
-  // 隨機 ID（P + 6 chars）理論上極少衝突；若碰撞就重試，避免重複 playerId 寫入。
-  for (let i = 0; i < 20; i++) {
-    const id = "P" + rid_(6);
-    if (!used.has(id)) return id;
-  }
-
-  // 極端情況 fallback：加入時間戳片段，提高唯一性。
-  let fallback = "P" + rid_(6) + String(nowMs_()).slice(-4);
-  while (used.has(fallback)) {
-    fallback = "P" + rid_(6) + String(nowMs_()).slice(-4);
-  }
-  return fallback;
 }
