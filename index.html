@@ -510,6 +510,7 @@
           <thead>
             <tr>
               <th>房號</th>
+              <th>房名</th>
               <th>狀態</th>
               <th>人數</th>
               <th>回合</th>
@@ -518,7 +519,7 @@
           </thead>
           <tbody id="roomsTbody">
             <tr>
-              <td colspan="5" style="font-size:12px;color:var(--text-dim)">尚未載入，請先填房名再刷新</td>
+              <td colspan="6" style="font-size:12px;color:var(--text-dim)">載入中…</td>
             </tr>
           </tbody>
         </table>
@@ -634,7 +635,9 @@
         <div class="card">
           <div class="game-over">🎆 遊戲結束 🎆</div>
           <div class="leaderboard" id="leaderboardEndBox">-</div>
-          <div style="text-align:center;margin-top:12px"><button id="btnRestart" class="hidden">🔄 重新開始（Host）</button>
+          <div style="text-align:center;margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+            <button id="btnRestart" class="hidden">🔄 重新開始（Host）</button>
+            <button id="btnBackLobby" class="secondary">🏠 返回大廳</button>
           </div>
         </div>
       </div>
@@ -683,7 +686,7 @@
       'cardHandBidding', 'btnResolve', 'playerListBidding',
       'revealItemName', 'revealHiddenValue', 'revealWinner', 'revealDetail', 'revealDeltas', 'revealCountdown',
       'leaderboardBox', 'btnNextRound', 'postCountdown', 'postAutoText',
-      'leaderboardEndBox', 'btnRestart',
+      'leaderboardEndBox', 'btnRestart', 'btnBackLobby',
       'roomError', 'debugToggle', 'debugLog'
     ].forEach(id => DOM[id] = $(id));
     DOM.apiUrlText.textContent = API_URL.length > 60 ? "…" + API_URL.slice(-50) : API_URL;
@@ -740,6 +743,7 @@
       return new Promise((res, rej) => {
         const u = new URL(API_URL); const cb = jsonpCb();
         u.searchParams.set("action", action); u.searchParams.set("callback", cb);
+        u.searchParams.set("_t", String(Date.now()));
         for (const [k, v] of Object.entries(params)) { if (v == null || v === "") continue; u.searchParams.set(k, String(v)); }
         const sc = document.createElement("script"); let done = false;
         const to = setTimeout(() => fin(new Error("JSONP timeout")), 15000);
@@ -753,9 +757,10 @@
     async function apiGET(action, params = {}) {
       if (S.preferJsonp) return apiGETJsonp(action, params);
       const u = new URL(API_URL); u.searchParams.set("action", action);
+      u.searchParams.set("_t", String(Date.now()));
       for (const [k, v] of Object.entries(params)) { if (v == null || v === "") continue; u.searchParams.set(k, String(v)); }
       try {
-        const r = await fetch(u.toString(), { method: "GET", credentials: "include" });
+        const r = await fetch(u.toString(), { method: "GET", credentials: "include", cache: "no-store" });
         const t = await r.text();
         if (looksLikeHtml(t)) throw new Error("API returned HTML");
         return JSON.parse(t);
@@ -795,10 +800,10 @@
 
     function renderRooms(rooms) {
       const tb = DOM.roomsTbody; tb.innerHTML = "";
-      if (!rooms.length) { tb.innerHTML = '<tr><td colspan="5" style="font-size:12px;color:var(--text-dim)">沒有活躍房間</td></tr>'; return; }
+      if (!rooms.length) { tb.innerHTML = '<tr><td colspan="6" style="font-size:12px;color:var(--text-dim)">沒有活躍房間</td></tr>'; return; }
       rooms.forEach(r => {
         const tr = document.createElement("tr");
-        tr.innerHTML = `<td style="font-family:monospace;font-weight:700">${r.roomId}</td><td style="font-size:12px">${stateLabel[r.state] || r.state}</td><td>${r.playerCount || 0}</td><td>${r.round || 0}/${r.maxRounds || 0}</td><td><button class="small secondary">加入</button></td>`;
+        tr.innerHTML = `<td style="font-family:monospace;font-weight:700">${r.roomId}</td><td style="font-size:12px">${esc(r.lobbyCode || '')}</td><td style="font-size:12px">${stateLabel[r.state] || r.state}</td><td>${r.playerCount || 0}</td><td>${r.round || 0}/${r.maxRounds || 0}</td><td><button class="small secondary">加入</button></td>`;
         tr.querySelector("button").onclick = () => joinRoomById(r.roomId);
         tb.appendChild(tr);
       });
@@ -807,16 +812,17 @@
     let lobbyBusy = false;
     function setLobbyBusy(v) { lobbyBusy = !!v; DOM.btnRefresh.disabled = lobbyBusy; DOM.btnCreateRoom.disabled = lobbyBusy; DOM.btnJoinRoom.disabled = lobbyBusy; }
 
-    /** 刷新房間列表 */
+    /** 刷新房間列表（lobbyCode 可選：有填則過濾，空則顯示全部） */
     async function refreshLobby() {
       showErr('lobbyError', '');
       if (lobbyBusy) return;
-      const lc = normLC(DOM.lobbyCode.value);
-      if (!lc) { showErr('lobbyError', '房名至少 2 個字'); setStatus(false, '請先填房名'); return; }
+      const lc = normLC(DOM.lobbyCode.value);  // 可能為空字串
       setLobbyBusy(true);
       try {
         setStatus(true, '載入房間列表…');
-        const out = await apiGET("listLobbyRooms", { lobbyCode: lc });
+        const params = {};
+        if (lc) params.lobbyCode = lc;  // 有填才傳，空值則列出全部
+        const out = await apiGET("listLobbyRooms", params);
         if (!out.ok) throw new Error(out.error || "listLobbyRooms failed");
         renderRooms(out.rooms || []);
         setStatus(true, '大廳就緒（' + (out.rooms || []).length + ' 間房）');
@@ -836,7 +842,7 @@
       setStatus(true, '建立房間…');
       const cr = await apiPOST("createRoom", { lobbyCode: lc });
       if (!cr.ok) throw new Error(cr.error || "createRoom failed");
-      const jr = await apiPOST("joinRoom", { roomId: cr.roomId, name });
+      const jr = await apiPOST("joinRoom", { roomId: cr.roomId, name, hostToken: cr.hostToken || "" });
       if (!jr.ok) throw new Error(jr.error || "joinRoom failed");
       S.roomId = cr.roomId; S.hostToken = cr.hostToken || ""; S.playerId = jr.playerId || ""; S.name = name; S.sinceEventId = 0;
       enterRoom();
@@ -880,10 +886,28 @@
     /* ══════════════════════════════════════════════════════════════════════════
      * 渲染輔助
      * ════════════════════════════════════════════════════════════════════════ */
-    function renderPlayerList(id, players) {
+    function renderPlayerList(id, players, amHost) {
       const el = DOM[id]; if (!el) return;
       if (!players || !players.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text-dim)">尚無玩家</div>'; return; }
-      el.innerHTML = players.map(p => `<div class="player-row"><span class="p-name">${p.isHost ? '👑 ' : ''}${esc(p.name)}${p.playerId === S.playerId ? ' (你)' : ''}</span><span class="p-stat">💰 ${p.budget}</span><span class="p-stat">⭐ ${p.score}</span></div>`).join('');
+      el.innerHTML = players.map(p => {
+        const isSelf = p.playerId === S.playerId;
+        const kickBtn = (amHost && !p.isHost && !isSelf)
+          ? ` <button class="kick-btn" data-pid="${p.playerId}" style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 4px" title="踢除玩家">❌</button>`
+          : '';
+        return `<div class="player-row"><span class="p-name">${p.isHost ? '👑 ' : ''}${esc(p.name)}${isSelf ? ' (你)' : ''}${kickBtn}</span><span class="p-stat">💰 ${p.budget}</span><span class="p-stat">⭐ ${p.score}</span></div>`;
+      }).join('');
+      // 綁定踢除按鈕
+      el.querySelectorAll('.kick-btn').forEach(btn => {
+        btn.onclick = async () => {
+          const tid = btn.dataset.pid;
+          if (!confirm('確定要踢除此玩家嗎？')) return;
+          try {
+            const o = await apiPOST("kickPlayer", { roomId: S.roomId, hostToken: S.hostToken, playerId: S.playerId, targetPlayerId: tid });
+            if (!o.ok) throw new Error(o.error || "kickPlayer failed");
+            S.lastRenderHash = "";
+          } catch (e) { showErr('roomError', String(e.message || e)); }
+        };
+      });
     }
 
     function renderLeaderboard(id, players) {
@@ -946,6 +970,16 @@
         DOM.roomRoundText.textContent = String(room.round || 0);
         DOM.roomMaxText.textContent = String(room.maxRounds || 0);
         const me = players.find(p => p.playerId === S.playerId);
+
+        // 偵測被踢：若自己不在玩家列表中，自動跳回大廳
+        if (!me && S.playerId) {
+          showLobby();
+          S.roomId = ""; S.playerId = ""; S.hostToken = ""; S.sinceEventId = 0; S.lastRenderHash = "";
+          setStatus(false, '你已被踢出房間');
+          alert('你已被房主踢出房間');
+          setTimeout(refreshLobby, 300);
+          return;
+        }
         DOM.meBudgetText.textContent = me ? String(me.budget) : "-";
         DOM.meScoreText.textContent = me ? String(me.score) : "-";
         const amHost = !!(S.hostToken || (me && me.isHost));
@@ -956,8 +990,8 @@
 
         // ── LOBBY ──
         if (room.state === "LOBBY") {
-          renderPlayerList('playerListLobby', players);
-          DOM.btnStartRound.classList.toggle('hidden', !amHost);
+          renderPlayerList('playerListLobby', players, amHost);
+          DOM.btnStartRound.classList.toggle('hidden', !amHost || players.length < 2);
           DOM.hostSettingsCard.classList.toggle('hidden', !amHost);
           if (amHost) {
             if (document.activeElement !== DOM.setMaxRounds) DOM.setMaxRounds.value = room.maxRounds;
@@ -974,7 +1008,7 @@
           if (myBid != null) { DOM.bidConfirmBox.classList.remove('hidden'); DOM.bidConfirmBox.textContent = `✅ 你已出價：${myBid}`; } else { DOM.bidConfirmBox.classList.add('hidden'); }
           renderCardHand('cardHandBidding', myCards, room.round, room.state);
           DOM.btnResolve.classList.toggle('hidden', !amHost);
-          renderPlayerList('playerListBidding', players);
+          renderPlayerList('playerListBidding', players, amHost);
         }
 
         // ── REVEAL ──
@@ -1077,8 +1111,7 @@
     wire('btnJoinRoom', () => joinRoomById(DOM.joinRoomId.value));
     wire('btnLeave', async () => {
       showLobby(); setStatus(true, '回到大廳');
-      // 修正：離開房間後自動刷新房間列表
-      if (normLC(DOM.lobbyCode.value)) setTimeout(refreshLobby, 300);
+      setTimeout(refreshLobby, 300);  // 離開後自動刷新房間列表
     });
     wire('btnBid', sendBid);
     wire('btnStartRound', startRoundHost);
@@ -1086,8 +1119,18 @@
     wire('btnNextRound', startRoundHost);   // 複用 startRound
     wire('btnResetDb', resetDb);
     wire('btnSaveSettings', saveSettings);
-    wire('btnRestart', async () => { showLobby(); setStatus(true, '遊戲結束，回到大廳'); });
-    wire('btnSetup', async () => { showErr('lobbyError', ''); setStatus(true, '初始化DB…'); const o = await apiPOST("setup", {}); if (!o.ok) throw new Error(o.error); setStatus(true, 'DB 初始化完成'); });
+    wire('btnRestart', async () => {
+      // Host 重新開始遊戲（不離開房間）
+      showErr('roomError', '');
+      const o = await apiPOST("restartGame", { roomId: S.roomId, hostToken: S.hostToken, playerId: S.playerId });
+      if (!o.ok) throw new Error(o.error || "restartGame failed");
+      S.lastRenderHash = ""; setStatus(true, '遊戲已重新開始');
+    });
+    wire('btnBackLobby', async () => {
+      showLobby(); setStatus(true, '回到大廳');
+      setTimeout(refreshLobby, 300);
+    });
+    wire('btnSetup', async () => { showErr('lobbyError', ''); setStatus(true, '初始化DB…'); const o = await apiPOST("setup", {}); if (!o.ok) throw new Error(o.error); setStatus(true, 'DB 初始化完成'); setTimeout(refreshLobby, 500); });
     wire('btnDebug', async () => { showErr('lobbyError', ''); setStatus(true, '測試 API…'); const o = await apiGET("debugInfo", {}); if (!o.ok) throw new Error(o.error); setStatus(true, 'API OK ✓'); logMsg("DEBUG:\n" + JSON.stringify(o, null, 2)); });
 
     // Debug log 折疊
@@ -1096,9 +1139,15 @@
     /* ══════════════════════════════════════════════════════════════════════════
      * 初始化
      * ════════════════════════════════════════════════════════════════════════ */
-    (function init() {
+    (async function init() {
       try { const u = new URL(location.href); const r = u.searchParams.get("roomId"); if (r) DOM.joinRoomId.value = r; } catch (_) { }
+      // 頁面載入時自動初始化 DB（確保表存在 + items 已 seed）再刷新房間列表
+      try {
+        setStatus(true, '初始化中…');
+        await apiPOST("setup", {});
+      } catch (_) { /* setup 失敗不擋刷新 */ }
       setStatus(true, '大廳就緒');
+      refreshLobby();
     })();
 
     // 全域錯誤攔截（避免靜默失敗）
