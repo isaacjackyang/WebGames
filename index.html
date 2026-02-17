@@ -1,683 +1,1421 @@
 <!doctype html>
 <html lang="zh-Hant">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Blind Auction Party</title>
-  <style>
-    :root{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans TC",Arial,sans-serif}
-    body{
-      margin:0;
-      color:#fff2e0;
-      min-height:100vh;
-      background:radial-gradient(circle at 20% 10%,#ffb4a2 0%,#cf1020 38%,#8d0010 100%);
-      position:relative;
-      overflow-x:hidden;
-    }
-    body::before{
-      content:"";
-      position:fixed;
-      inset:0;
-      pointer-events:none;
-      background:
-        radial-gradient(circle at 12% 80%,rgba(255,220,127,.2) 0 18%,transparent 25%),
-        radial-gradient(circle at 90% 24%,rgba(255,220,127,.2) 0 16%,transparent 26%),
-        radial-gradient(circle at 50% 4%,rgba(255,245,192,.12) 0 14%,transparent 22%);
-      z-index:0;
-    }
-    header{padding:14px 16px;border-bottom:1px solid #ffd27d66;display:flex;justify-content:space-between;gap:12px;align-items:center;background:#7b0012cc;position:sticky;top:0;z-index:3;backdrop-filter:blur(4px)}
-    .small{color:#ffe7c4;font-size:12px}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-    main{padding:16px;max-width:980px;margin:0 auto}
-    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-    .card{background:linear-gradient(155deg,#a40016 0%,#8e0012 45%,#73000d 100%);border:1px solid #ffd27d8c;border-radius:12px;padding:14px;box-shadow:0 8px 18px #4f000b66;position:relative;z-index:2}
-    h3{margin:0 0 10px}
-    label{display:block;font-size:12px;color:#ffe2b8;margin:10px 0 6px}
-    input{background:#65000f;color:#fff2e0;border:1px solid #ffcc7790;border-radius:10px;padding:10px 12px;outline:none}
-    input:focus{border-color:#ffe29f;box-shadow:0 0 0 2px #ffe29f36}
-    button{background:linear-gradient(180deg,#ffcb59,#f8a400);color:#7a0009;border:none;border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:900}
-    button.secondary{background:linear-gradient(180deg,#ff9f6a,#ff6f45);color:#61000d}
-    button.danger{background:linear-gradient(180deg,#ff7b6e,#ff3232);color:#4b0008}
-    button:disabled{opacity:.55;cursor:not-allowed}
-    .status{padding:10px 12px;border-radius:10px;background:#7f0011;border:1px solid #ffd27d99;position:relative;z-index:2}
-    .ok{color:#c7ffbe}.bad{color:#ffe1e1}
-    .hint{color:#ffe7c4;font-size:12px;margin-top:6px;white-space:pre-wrap}
-    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    @media (max-width:860px){.grid2{grid-template-columns:1fr}}
-    table{width:100%;border-collapse:collapse}
-    th,td{border-bottom:1px solid #ffd27d55;padding:8px 6px;font-size:13px;text-align:left}
-    th{color:#ffe7c4;font-weight:800}
-    .log{max-height:260px;overflow:auto;font-size:12px;background:#65000f;border:1px solid #ffd27d66;border-radius:10px;padding:10px;white-space:pre-wrap}
-    .pill{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;border:1px solid #ffd27d88;background:#740010;color:#ffe2b8}
 
-    .festive-layer{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
-    .floaty{position:absolute;font-size:34px;filter:drop-shadow(0 4px 6px rgba(65,0,0,.5));animation:sway var(--dur) ease-in-out infinite;transform-origin:center top;opacity:.9}
-    .floaty.small{font-size:28px;opacity:.82}
-    @keyframes sway{
-      0%,100%{transform:translateY(0) rotate(-8deg)}
-      50%{transform:translateY(12px) rotate(8deg)}
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Blind Auction Party 🧧</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    :root {
+      --bg1: #8d0010;
+      --bg2: #cf1020;
+      --bg3: #a40016;
+      --card: #a40016;
+      --card-border: #ffd27d8c;
+      --gold: #ffd27d;
+      --gold-light: #ffe7c4;
+      --gold-bright: #ffcb59;
+      --text: #fff2e0;
+      --text-dim: #ffe2b8;
+      --danger: #ff3232;
+      font-family: 'Noto Sans TC', system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    body {
+      color: var(--text);
+      min-height: 100dvh;
+      background: linear-gradient(165deg, #ffb4a2 0%, #cf1020 30%, #8d0010 100%);
+      overflow-x: hidden;
+    }
+
+    /* === Header === */
+    header {
+      padding: 10px 16px;
+      border-bottom: 1px solid #ffd27d55;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #7b0012dd;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    header .title {
+      font-weight: 900;
+      font-size: 18px;
+      letter-spacing: .5px
+    }
+
+    header .sub {
+      color: var(--gold-light);
+      font-size: 11px
+    }
+
+    /* === Layout === */
+    main {
+      padding: 12px;
+      max-width: 640px;
+      margin: 0 auto
+    }
+
+    .hidden {
+      display: none !important
+    }
+
+    /* === Components === */
+    .card {
+      background: linear-gradient(155deg, #b80018 0%, #8e0012 50%, #73000d 100%);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 6px 20px #3a000866;
+      margin-bottom: 12px;
+    }
+
+    .card h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      border: 1px solid var(--gold);
+      background: #74001099;
+      color: var(--gold-light);
+    }
+
+    .pill.host {
+      background: #c8860099;
+      color: #fff
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-dim);
+      margin: 8px 0 4px
+    }
+
+    input,
+    select {
+      background: #55000d;
+      color: var(--text);
+      border: 1px solid #ffcc7766;
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-size: 14px;
+      outline: none;
+      width: 100%;
+    }
+
+    input:focus {
+      border-color: var(--gold-bright);
+      box-shadow: 0 0 0 2px #ffe29f33
+    }
+
+    button {
+      background: linear-gradient(180deg, #ffcb59, #f8a400);
+      color: #7a0009;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-weight: 900;
+      font-size: 14px;
+      transition: transform .1s;
+    }
+
+    button:active {
+      transform: scale(.96)
+    }
+
+    button.secondary {
+      background: linear-gradient(180deg, #ff9f6a, #ff6f45);
+      color: #61000d
+    }
+
+    button.danger {
+      background: linear-gradient(180deg, #ff7b6e, #ff3232);
+      color: #fff
+    }
+
+    button:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+      transform: none
+    }
+
+    button.small {
+      padding: 6px 12px;
+      font-size: 12px;
+      border-radius: 8px
+    }
+
+    .status-bar {
+      padding: 8px 12px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      background: #6a000e;
+      border: 1px solid #ffd27d44;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-bar .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #6f6
+    }
+
+    .status-bar .dot.bad {
+      background: #f66
+    }
+
+    .status-bar span {
+      flex: 1
+    }
+
+    .error-box {
+      color: #ffd0d0;
+      font-size: 12px;
+      background: #55000d;
+      border: 1px solid #ff434355;
+      border-radius: 8px;
+      padding: 8px;
+      margin-top: 8px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* === Tables === */
+    table {
+      width: 100%;
+      border-collapse: collapse
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid #ffd27d33;
+      padding: 7px 6px;
+      font-size: 13px;
+      text-align: left
+    }
+
+    th {
+      color: var(--gold-light);
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase
+    }
+
+    /* === Countdown === */
+    .countdown {
+      font-size: 64px;
+      font-weight: 900;
+      text-align: center;
+      color: var(--gold-bright);
+      text-shadow: 0 4px 20px #ff8c0066;
+      line-height: 1;
+      margin: 8px 0;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .countdown.small {
+      font-size: 32px
+    }
+
+    /* === Reveal / Result panel === */
+    .result-panel {
+      text-align: center;
+      padding: 10px 0
+    }
+
+    .result-panel .winner-name {
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--gold-bright);
+      text-shadow: 0 2px 12px #ffaa0066;
+    }
+
+    .result-panel .detail {
+      font-size: 14px;
+      color: var(--text-dim);
+      margin: 6px 0
+    }
+
+    .delta-positive {
+      color: #a8ffb0;
+      font-weight: 700
+    }
+
+    .delta-negative {
+      color: #ffaaaa;
+      font-weight: 700
+    }
+
+    /* === Leaderboard === */
+    .leaderboard .rank {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      margin: 4px 0;
+      background: #65000d55;
+      border: 1px solid #ffd27d22;
+    }
+
+    .leaderboard .rank:first-child {
+      background: #c8860033;
+      border-color: var(--gold)
+    }
+
+    .leaderboard .rank-num {
+      font-weight: 900;
+      color: var(--gold);
+      min-width: 24px;
+      text-align: center
+    }
+
+    .leaderboard .rank-name {
+      flex: 1;
+      font-weight: 700
+    }
+
+    .leaderboard .rank-score {
+      font-weight: 900;
+      color: var(--gold-bright);
+      font-size: 18px
+    }
+
+    .leaderboard .rank-budget {
+      font-size: 11px;
+      color: var(--text-dim)
+    }
+
+    /* === Card hand === */
+    .card-hand {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 8px 0
+    }
+
+    .card-item {
+      background: linear-gradient(160deg, #d4a020, #b8860b);
+      color: #3a0005;
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 3px 8px #5a000a55;
+      transition: transform .15s;
+      min-width: 80px;
+      text-align: center;
+    }
+
+    .card-item:hover {
+      transform: translateY(-2px)
+    }
+
+    .card-item.used {
+      opacity: .4;
+      cursor: not-allowed
+    }
+
+    .card-item .card-count {
+      font-size: 10px;
+      opacity: .7
+    }
+
+    /* === Player list === */
+    .player-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      margin: 3px 0;
+      background: #65000d44;
+    }
+
+    .player-row .p-name {
+      flex: 1;
+      font-weight: 700;
+      font-size: 14px
+    }
+
+    .player-row .p-stat {
+      font-size: 12px;
+      color: var(--text-dim)
+    }
+
+    /* === Settings (host) === */
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px
+    }
+
+    @media(max-width:420px) {
+      .settings-grid {
+        grid-template-columns: 1fr
+      }
+    }
+
+    .settings-grid label {
+      margin: 0
+    }
+
+    .settings-grid input {
+      padding: 7px 8px;
+      font-size: 13px
+    }
+
+    /* === Festive decorations (mobile-optimized: fewer elements) === */
+    .festive {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden
+    }
+
+    .festive span {
+      position: absolute;
+      font-size: 28px;
+      opacity: .6;
+      animation: sway var(--d, 3s) ease-in-out infinite;
+    }
+
+    @keyframes sway {
+
+      0%,
+      100% {
+        transform: translateY(0) rotate(-6deg)
+      }
+
+      50% {
+        transform: translateY(8px) rotate(6deg)
+      }
+    }
+
+    /* === Game Over === */
+    .game-over {
+      text-align: center;
+      font-size: 32px;
+      font-weight: 900;
+      background: linear-gradient(90deg, var(--gold), #ff6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin: 16px 0 8px;
+    }
+
+    /* === Peek hint === */
+    .peek-hint {
+      background: #d4a02033;
+      border: 1px solid var(--gold);
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin: 6px 0;
+      font-size: 13px;
+      color: var(--gold-bright);
+      text-align: center;
+    }
+
+    /* === Bid confirmation === */
+    .bid-confirm {
+      background: #1a6b2033;
+      border: 1px solid #6fff8844;
+      border-radius: 8px;
+      padding: 6px 10px;
+      margin: 6px 0;
+      font-size: 13px;
+      color: #a8ffb0;
+    }
+
+    /* === Debug log === */
+    .debug-toggle {
+      font-size: 11px;
+      color: var(--text-dim);
+      cursor: pointer;
+      text-decoration: underline;
+      margin-top: 8px;
+      display: inline-block
+    }
+
+    .log {
+      max-height: 200px;
+      overflow: auto;
+      font-size: 11px;
+      background: #3a000866;
+      border: 1px solid #ffd27d22;
+      border-radius: 8px;
+      padding: 8px;
+      white-space: pre-wrap;
+      font-family: monospace;
+      margin-top: 6px
     }
   </style>
 </head>
+
 <body>
-<div class="festive-layer" aria-hidden="true">
-  <span class="floaty" style="left:4%;top:12%;--dur:2.8s">🧧</span>
-  <span class="floaty small" style="left:14%;top:62%;--dur:2.4s">🪙</span>
-  <span class="floaty" style="left:24%;top:22%;--dur:3.2s">🧧</span>
-  <span class="floaty small" style="left:82%;top:18%;--dur:2.2s">🪙</span>
-  <span class="floaty" style="left:91%;top:58%;--dur:3.1s">🧧</span>
-  <span class="floaty small" style="left:72%;top:74%;--dur:2.7s">🏮</span>
-  <span class="floaty" style="left:46%;top:8%;--dur:3.4s">💰</span>
-</div>
-<header>
-  <div>
-    <div style="font-weight:900">Blind Auction Party</div>
-    <div class="small">Google Sheet 當 DB / Apps Script 當 API</div>
-  </div>
-  <div class="small mono" id="apiUrlText"></div>
-</header>
 
-<main>
-  <div class="status">
-    <span class="pill">狀態</span>
-    <span class="small" id="statusText">初始化中…</span>
+  <!-- Festive decorations (reduced for mobile perf) -->
+  <div class="festive" aria-hidden="true">
+    <span style="left:5%;top:15%;--d:2.8s">🧧</span>
+    <span style="left:85%;top:20%;--d:2.3s">🪙</span>
+    <span style="left:48%;top:6%;--d:3.2s">💰</span>
+    <span style="left:75%;top:70%;--d:2.6s">🏮</span>
   </div>
 
-  <div style="height:12px"></div>
+  <header>
+    <div>
+      <div class="title">🧧 盲拍派對</div>
+      <div class="sub">Blind Auction Party</div>
+    </div>
+    <div style="text-align:right">
+      <div class="sub" id="apiUrlText"></div>
+    </div>
+  </header>
 
-  <!-- LOBBY -->
-  <section class="grid2" id="viewLobby">
-    <div class="card">
-      <h3>大廳</h3>
-
-      <label>房名 / 同場域代碼（lobbyCode）</label>
-      <input id="lobbyCode" placeholder="例如：PARTY01" autocomplete="off"/>
-
-      <label>你的名字</label>
-      <input id="playerName" placeholder="例如：Jack" autocomplete="off"/>
-
-      <div class="row" style="margin-top:12px">
-        <button id="btnCreateRoom">開新房間</button>
-        <button id="btnRefresh" class="secondary">刷新房間列表</button>
-        <button id="btnSetup" class="secondary">初始化DB</button>
-        <button id="btnDebug" class="secondary">測試API</button>
-      </div>
-
-      <div class="hint" id="lobbyError" style="display:none"></div>
-
-      <div style="height:12px"></div>
-
-      <label>用 roomId 直接加入</label>
-      <div class="row">
-        <input id="joinRoomId" class="mono" placeholder="例如：0123" style="flex:1;min-width:220px" autocomplete="off"/>
-        <button id="btnJoinRoom" class="secondary">加入</button>
-      </div>
-
-      <div class="hint">
-        Debug 提醒：若 API 回傳 HTML（登入頁/權限頁），此頁會顯示「API 回傳 HTML」而不是炸 JSON.parse。
-      </div>
+  <main>
+    <!-- Status bar -->
+    <div class="status-bar">
+      <div class="dot" id="statusDot"></div>
+      <span id="statusText">初始化中…</span>
     </div>
 
-    <div class="card">
-      <h3>房間列表</h3>
-      <table>
-        <thead><tr><th>roomId</th><th>state</th><th>人數</th><th>回合</th><th></th></tr></thead>
-        <tbody id="roomsTbody"><tr><td colspan="5" class="small">尚未載入</td></tr></tbody>
-      </table>
-    </div>
-  </section>
+    <!-- ====== LOBBY VIEW ====== -->
+    <div id="viewLobby">
+      <div class="card">
+        <h3>🏠 大廳</h3>
 
-  <!-- ROOM -->
-  <section class="grid2" id="viewRoom" style="display:none">
-    <div class="card">
-      <h3>房間</h3>
-      <div class="row">
-        <span class="pill">roomId</span>
-        <span class="mono" id="roomIdText"></span>
-        <span style="margin-left:auto"></span>
-        <button id="btnResetDb" class="danger" style="display:none">重置資料庫（Host）</button>
-        <button id="btnLeave" class="secondary">離開</button>
-      </div>
+        <label>房名 / 同場域代碼</label>
+        <input id="lobbyCode" placeholder="例：PARTY01" autocomplete="off" />
 
-      <div style="height:10px"></div>
+        <label>你的名字</label>
+        <input id="playerName" placeholder="例：小明" autocomplete="off" />
 
-      <div class="row">
-        <span class="pill">state</span><b id="roomStateText">-</b>
-        <span class="pill">round</span><b id="roomRoundText">-</b>
-      </div>
+        <div class="row" style="margin-top:12px">
+          <button id="btnCreateRoom">🎉 開新房間</button>
+          <button id="btnRefresh" class="secondary">🔄 刷新列表</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button id="btnSetup" class="small secondary">初始化DB</button>
+          <button id="btnDebug" class="small secondary">測試API</button>
+        </div>
 
-      <div style="height:10px"></div>
+        <div id="lobbyError" class="error-box hidden"></div>
 
-      <div class="row">
-        <span class="pill">你</span><b id="meNameText">-</b>
-        <span class="pill">budget</span><b id="meBudgetText">-</b>
-        <span class="pill">score</span><b id="meScoreText">-</b>
-      </div>
-
-      <div style="height:12px"></div>
-
-      <div id="bidBox" style="display:none">
-        <div class="small">本回合物品：<b id="itemNameText"></b></div>
-        <div class="hint" id="itemHintText"></div>
-        <div class="hint" id="deadlineText"></div>
-
-        <label>出價</label>
+        <label style="margin-top:14px">用 roomId 直接加入</label>
         <div class="row">
-          <input id="bidInput" type="number" min="0" step="1" style="width:160px" placeholder="例如：12"/>
-          <button id="btnBid">送出出價</button>
-          <button id="btnResolve" class="danger" style="display:none">結算（Host）</button>
+          <input id="joinRoomId" placeholder="例：0123" style="flex:1" autocomplete="off" />
+          <button id="btnJoinRoom" class="secondary">加入</button>
         </div>
       </div>
 
-      <div style="height:10px"></div>
-      <button id="btnStartRound" class="secondary" style="display:none">開始回合（Host）</button>
-
-      <div class="hint bad" id="roomError" style="display:none"></div>
+      <div class="card">
+        <h3>📋 房間列表</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>房號</th>
+              <th>狀態</th>
+              <th>人數</th>
+              <th>回合</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="roomsTbody">
+            <tr>
+              <td colspan="5" style="font-size:12px;color:var(--text-dim)">尚未載入，請先填房名再刷新</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
-    <div class="card">
-      <h3>玩家</h3>
-      <div id="playersBox" class="small">-</div>
+    <!-- ====== ROOM VIEW ====== -->
+    <div id="viewRoom" class="hidden">
 
-      <div style="height:12px"></div>
-      <h3>Debug</h3>
-      <div class="log" id="debugLog"></div>
+      <!-- Room header (always visible) -->
+      <div class="card" style="padding:10px 14px">
+        <div class="row" style="justify-content:space-between">
+          <div class="row" style="gap:6px">
+            <span class="pill">房間</span>
+            <b id="roomIdText" style="font-family:monospace;font-size:16px"></b>
+            <span class="pill" id="roomStatePill">LOBBY</span>
+            <span style="font-size:12px;color:var(--text-dim)">回合 <b id="roomRoundText">0</b>/<b
+                id="roomMaxText">8</b></span>
+          </div>
+          <div class="row" style="gap:6px">
+            <button id="btnResetDb" class="danger small hidden">重置DB</button>
+            <button id="btnLeave" class="small secondary">離開</button>
+          </div>
+        </div>
+        <div class="row" style="margin-top:6px;gap:12px">
+          <span style="font-size:13px">👤 <b id="meNameText">-</b></span>
+          <span style="font-size:13px">💰 <b id="meBudgetText">-</b></span>
+          <span style="font-size:13px">⭐ <b id="meScoreText">-</b></span>
+        </div>
+      </div>
+
+      <!-- === LOBBY STATE === -->
+      <div id="stateLobby">
+        <div class="card">
+          <h3>👥 玩家列表</h3>
+          <div id="playerListLobby">-</div>
+        </div>
+
+        <div class="card hidden" id="hostSettingsCard">
+          <h3>⚙️ 房主設定</h3>
+          <div class="settings-grid">
+            <div>
+              <label>回合數</label>
+              <input id="setMaxRounds" type="number" min="1" max="20" value="8" />
+            </div>
+            <div>
+              <label>每回合秒數</label>
+              <input id="setRoundSeconds" type="number" min="5" max="120" value="25" />
+            </div>
+            <div>
+              <label>起始預算</label>
+              <input id="setStartBudget" type="number" min="10" max="9999" value="100" />
+            </div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <button id="btnSaveSettings" class="small secondary">💾 儲存設定</button>
+          </div>
+        </div>
+
+        <div style="text-align:center;margin:12px 0">
+          <button id="btnStartRound" class="hidden" style="font-size:18px;padding:14px 32px">🚀 開始回合</button>
+        </div>
+      </div>
+
+      <!-- === BIDDING STATE === -->
+      <div id="stateBidding" class="hidden">
+        <div class="card" style="text-align:center">
+          <div style="font-size:13px;color:var(--text-dim)">本回合物品</div>
+          <div style="font-size:22px;font-weight:900;margin:4px 0" id="bidItemName">-</div>
+          <div style="font-size:14px;color:var(--gold-light)" id="bidItemHint">-</div>
+          <div id="peekHintBox" class="peek-hint hidden"></div>
+          <div class="countdown" id="bidCountdown">--</div>
+          <div style="font-size:11px;color:var(--text-dim)">剩餘秒數</div>
+        </div>
+
+        <div class="card">
+          <h3>💵 出價</h3>
+          <div class="row">
+            <input id="bidInput" type="number" min="0" step="1" placeholder="輸入金額" style="flex:1" />
+            <button id="btnBid">送出出價</button>
+          </div>
+          <div id="bidConfirmBox" class="bid-confirm hidden"></div>
+
+          <div style="margin-top:10px">
+            <div style="font-size:12px;color:var(--text-dim);margin-bottom:6px">🃏 手牌</div>
+            <div class="card-hand" id="cardHandBidding"></div>
+          </div>
+
+          <div style="margin-top:10px">
+            <button id="btnResolve" class="danger small hidden">⚡ 立即結算（Host）</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>👥 玩家</h3>
+          <div id="playerListBidding" style="font-size:12px">-</div>
+        </div>
+      </div>
+
+      <!-- === REVEAL STATE === -->
+      <div id="stateReveal" class="hidden">
+        <div class="card">
+          <div class="result-panel">
+            <div style="font-size:14px;color:var(--text-dim)">🎊 本回合結果</div>
+            <div id="revealItemName" style="font-size:18px;font-weight:700;margin:6px 0">-</div>
+            <div style="font-size:13px;color:var(--text-dim)">真實價值：<b id="revealHiddenValue"
+                style="color:var(--gold-bright)">?</b></div>
+            <div style="margin:12px 0">
+              <div style="font-size:13px;color:var(--text-dim)">🏆 得標者</div>
+              <div class="winner-name" id="revealWinner">-</div>
+              <div class="detail" id="revealDetail">-</div>
+            </div>
+            <div id="revealDeltas" style="font-size:13px"></div>
+          </div>
+          <div class="countdown small" id="revealCountdown">--</div>
+          <div style="text-align:center;font-size:11px;color:var(--text-dim)">自動進入排行榜…</div>
+        </div>
+      </div>
+
+      <!-- === POSTROUND STATE === -->
+      <div id="statePostround" class="hidden">
+        <div class="card">
+          <h3>🏆 排行榜</h3>
+          <div class="leaderboard" id="leaderboardBox">-</div>
+        </div>
+        <div style="text-align:center;margin:12px 0">
+          <button id="btnNextRound" class="hidden" style="font-size:18px;padding:14px 32px">▶️ 下一回合</button>
+          <div class="countdown small" id="postCountdown">--</div>
+          <div style="font-size:11px;color:var(--text-dim)" id="postAutoText">自動進入下一回合…</div>
+        </div>
+      </div>
+
+      <!-- === ENDED STATE === -->
+      <div id="stateEnded" class="hidden">
+        <div class="card">
+          <div class="game-over">🎆 遊戲結束 🎆</div>
+          <div class="leaderboard" id="leaderboardEndBox">-</div>
+          <div style="text-align:center;margin-top:12px">
+            <button id="btnRestart" class="hidden">🔄 重新開始（Host）</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error + Debug -->
+      <div id="roomError" class="error-box hidden"></div>
+      <div>
+        <span class="debug-toggle" id="debugToggle">▶ Debug Log</span>
+        <div class="log hidden" id="debugLog"></div>
+      </div>
     </div>
-  </section>
-</main>
+  </main>
 
-<script>
-  // ===== API URL =====
-  // 優先使用後端在 template 注入的 apiBaseUrl，避免 iframe/googleusercontent URL 造成「拿到 HTML 不是 JSON」。
-  // 其次可用 ?api=... 強制覆寫，方便除錯或切換不同部署。
-  // 最後才 fallback 到目前網址推導（兼容本地靜態測試）。
-  const TEMPLATE_API_BASE = "<?= apiBaseUrl ?>";
+  <script>
+    // ===== API URL =====
+    const TEMPLATE_API_BASE = "<?= apiBaseUrl ?>";
 
-  function isTemplatePlaceholder(s){
-    return /<\?=\s*apiBaseUrl\s*\?>/i.test(String(s||""));
-  }
+    function isTemplatePlaceholder(s) {
+      return /<%=\s*apiBaseUrl\s*%>/i.test(String(s || "")) || /<\?=\s*apiBaseUrl\s*\?>/i.test(String(s || ""));
+    }
 
-  function computeApiUrl(){
-    const byTemplate = String(TEMPLATE_API_BASE || "").trim();
-    // 本地直接開 index.html 時，template 不會被 Apps Script 轉換，
-    // 會留下原樣 "<?= apiBaseUrl ?>"，這不是合法 URL，fetch 會拋 NetworkError。
-    // 因此要先排除模板佔位字串，再決定是否採用。
-    if (byTemplate && !isTemplatePlaceholder(byTemplate)) return byTemplate;
+    function computeApiUrl() {
+      const byTemplate = String(TEMPLATE_API_BASE || "").trim();
+      if (byTemplate && !isTemplatePlaceholder(byTemplate)) return byTemplate;
+      const u = new URL(window.location.href);
+      const byQuery = (u.searchParams.get("api") || "").trim();
+      if (byQuery) return byQuery;
+      u.hash = "";
+      u.searchParams.delete("api");
+      const path = u.pathname.endsWith("/dev") ? u.pathname.replace(/\/dev$/, "/exec") : u.pathname;
+      return u.origin + path;
+    }
+    const API_URL = computeApiUrl();
 
-    const u = new URL(window.location.href);
-    const byQuery = (u.searchParams.get("api") || "").trim();
-    if (byQuery) return byQuery;
+    // ===== DOM Cache =====
+    const $ = id => document.getElementById(id);
+    const DOM = {};
+    ['apiUrlText', 'statusDot', 'statusText',
+      'viewLobby', 'viewRoom', 'lobbyCode', 'playerName',
+      'btnCreateRoom', 'btnRefresh', 'btnSetup', 'btnDebug', 'btnJoinRoom', 'joinRoomId',
+      'lobbyError', 'roomsTbody',
+      'roomIdText', 'roomStatePill', 'roomRoundText', 'roomMaxText',
+      'meNameText', 'meBudgetText', 'meScoreText',
+      'btnLeave', 'btnResetDb',
+      'stateLobby', 'stateBidding', 'stateReveal', 'statePostround', 'stateEnded',
+      'playerListLobby', 'hostSettingsCard', 'setMaxRounds', 'setRoundSeconds', 'setStartBudget',
+      'btnSaveSettings', 'btnStartRound',
+      'bidItemName', 'bidItemHint', 'peekHintBox', 'bidCountdown', 'bidInput', 'btnBid', 'bidConfirmBox',
+      'cardHandBidding', 'btnResolve', 'playerListBidding',
+      'revealItemName', 'revealHiddenValue', 'revealWinner', 'revealDetail', 'revealDeltas', 'revealCountdown',
+      'leaderboardBox', 'btnNextRound', 'postCountdown', 'postAutoText',
+      'leaderboardEndBox', 'btnRestart',
+      'roomError', 'debugToggle', 'debugLog'
+    ].forEach(id => DOM[id] = $(id));
 
-    u.hash = "";
-    u.searchParams.delete("api");
-    const path = u.pathname.endsWith("/dev") ? u.pathname.replace(/\/dev$/,"/exec") : u.pathname;
-    return u.origin + path;
-  }
-  const API_URL = computeApiUrl();
-  document.getElementById("apiUrlText").textContent = "API: " + API_URL;
+    DOM.apiUrlText.textContent = API_URL.length > 60 ? "…" + API_URL.slice(-50) : API_URL;
 
-  const S = {
-    roomId: "",
-    playerId: "",
-    hostToken: "",
-    name: "",
-    sinceEventId: 0,
-    syncing: false,   // single-flight
-    stop: false,
-    preferJsonp: false
-  };
+    // ===== State =====
+    const S = {
+      roomId: "", playerId: "", hostToken: "", name: "",
+      sinceEventId: 0, syncing: false, stop: false, preferJsonp: false,
+      lastState: "", countdownInterval: null, lastRenderHash: ""
+    };
 
-  const UI = {
-    lobbyLoading: false
-  };
+    // ===== Helpers =====
+    function setStatus(ok, msg) {
+      DOM.statusText.textContent = msg;
+      DOM.statusDot.className = ok ? "dot" : "dot bad";
+    }
 
-  function setStatus(ok, msg){
-    const el = document.getElementById("statusText");
-    el.textContent = msg;
-    el.className = ok ? "small ok" : "small bad";
-  }
+    function showErr(elId, msg) {
+      const el = DOM[elId];
+      if (!el) return;
+      if (!msg) { el.classList.add('hidden'); el.textContent = ""; return; }
+      el.classList.remove('hidden');
+      el.textContent = msg;
+    }
 
-  function showErr(id, msg){
-    const el = document.getElementById(id);
-    if (!msg) { el.style.display="none"; el.textContent=""; return; }
-    el.style.display="";
-    el.textContent = msg;
-  }
+    function logMsg(msg) {
+      const box = DOM.debugLog;
+      box.textContent = (box.textContent + "\n" + msg).trim();
+      const lines = box.textContent.split("\n");
+      if (lines.length > 150) box.textContent = lines.slice(-150).join("\n");
+      box.scrollTop = box.scrollHeight;
+    }
 
-  function log(msg){
-    const box = document.getElementById("debugLog");
-    box.textContent = (box.textContent + "\n" + msg).trim();
-    const lines = box.textContent.split("\n");
-    if (lines.length > 220) box.textContent = lines.slice(lines.length-220).join("\n");
-    box.scrollTop = box.scrollHeight;
-  }
+    function looksLikeHtml(t) {
+      const s = String(t || "").trim().toLowerCase();
+      return s.startsWith("<!doctype") || s.startsWith("<html") || s.includes("<head") || s.includes("<body");
+    }
 
-  function looksLikeHtml(t){
-    const raw = String(t||"").trim();
-    const s = raw.toLowerCase();
-    return s.startsWith("<!doctype") || s.startsWith("<html") || s.includes("<head") || s.includes("<body") || s.includes("iframe#userhtmlframe");
-  }
+    function normalizeLobbyCode(s) {
+      s = String(s || "").trim();
+      if (!s) return "";
+      s = s.replace(/\s+/g, "").replace(/[a-z]/g, c => c.toUpperCase());
+      return s.length >= 2 ? s.slice(0, 16) : "";
+    }
 
-  function randomJsonpCallbackName(){
-    return "__BAP_JSONP_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
-  }
+    function must(s, name) {
+      s = String(s || "").trim();
+      if (!s) throw new Error("請填入：" + name);
+      return s;
+    }
 
-  function apiGETJsonp(action, params={}){
-    return new Promise((resolve, reject)=>{
+    // ===== JSONP =====
+    function randomCbName() { return "__BAP_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8); }
+
+    function apiGETJsonp(action, params = {}) {
+      return new Promise((resolve, reject) => {
+        const u = new URL(API_URL);
+        const cb = randomCbName();
+        u.searchParams.set("action", action);
+        u.searchParams.set("callback", cb);
+        for (const [k, v] of Object.entries(params)) {
+          if (v === undefined || v === null || v === "") continue;
+          u.searchParams.set(k, String(v));
+        }
+        const script = document.createElement("script");
+        let done = false;
+        const timeout = setTimeout(() => finish(new Error("JSONP timeout")), 15000);
+        function cleanup() {
+          clearTimeout(timeout);
+          if (script.parentNode) script.parentNode.removeChild(script);
+          try { delete window[cb]; } catch (_) { window[cb] = undefined; }
+        }
+        function finish(err, data) {
+          if (done) return; done = true; cleanup();
+          if (err) reject(err); else resolve(data);
+        }
+        window[cb] = data => finish(null, data);
+        script.onerror = () => finish(new Error("JSONP load failed"));
+        script.src = u.toString();
+        document.head.appendChild(script);
+      });
+    }
+
+    function isNetworkErr(err) {
+      const m = String(err && err.message ? err.message : err || "").toLowerCase();
+      return m.includes("networkerror") || m.includes("failed to fetch") || m.includes("load failed") || m.includes("fetch");
+    }
+
+    async function apiGET(action, params = {}) {
+      if (S.preferJsonp) return apiGETJsonp(action, params);
       const u = new URL(API_URL);
-      const callbackName = randomJsonpCallbackName();
       u.searchParams.set("action", action);
-      u.searchParams.set("callback", callbackName);
-      for (const [k,v] of Object.entries(params)){
-        if (v===undefined || v===null || v==="") continue;
+      for (const [k, v] of Object.entries(params)) {
+        if (v === undefined || v === null || v === "") continue;
         u.searchParams.set(k, String(v));
       }
-
-      const script = document.createElement("script");
-      let done = false;
-      const timeout = setTimeout(()=> finish(new Error("JSONP timeout")), 12000);
-
-      function cleanup(){
-        clearTimeout(timeout);
-        if (script.parentNode) script.parentNode.removeChild(script);
-        try { delete window[callbackName]; } catch(_) { window[callbackName] = undefined; }
+      try {
+        const res = await fetch(u.toString(), { method: "GET", credentials: "include" });
+        const text = await res.text();
+        if (looksLikeHtml(text)) throw new Error("API returned HTML");
+        try { return JSON.parse(text); }
+        catch (_) { throw new Error("Non-JSON: " + text.slice(0, 200)); }
+      } catch (err) {
+        logMsg("GET→JSONP " + action + " reason=" + String(err.message || err));
+        if (isNetworkErr(err)) S.preferJsonp = true;
+        return apiGETJsonp(action, params);
       }
-
-      function finish(err, data){
-        if (done) return;
-        done = true;
-        cleanup();
-        if (err) reject(err);
-        else resolve(data);
-      }
-
-      window[callbackName] = (data)=> finish(null, data);
-      script.onerror = ()=> finish(new Error("JSONP script load failed"));
-      script.src = u.toString();
-      document.head.appendChild(script);
-    });
-  }
-
-  function must(s, name){
-    s = String(s||"").trim();
-    if (!s) throw new Error("請填入：" + name);
-    return s;
-  }
-
-  function normalizeLobbyCode(s){
-    s = String(s||"").trim();
-    if (!s) return "";
-    // 允許「房名」使用中文/英文/數字；英文統一轉大寫，移除空白
-    // 避免原本只保留 A-Z0-9 導致輸入中文時變成空字串、看起來像按鈕沒反應。
-    s = s.replace(/\s+/g, "").replace(/[a-z]/g, c => c.toUpperCase());
-    return s.length >= 2 ? s.slice(0,16) : "";
-  }
-
-  function isNetworkLikeError(err){
-    const m = String(err && err.message ? err.message : err || "").toLowerCase();
-    return m.includes("networkerror") || m.includes("failed to fetch") || m.includes("load failed") || m.includes("fetch");
-  }
-
-  async function apiGET(action, params={}){
-    if (S.preferJsonp) return apiGETJsonp(action, params);
-    const u = new URL(API_URL);
-    u.searchParams.set("action", action);
-    for (const [k,v] of Object.entries(params)){
-      if (v===undefined || v===null || v==="") continue;
-      u.searchParams.set(k, String(v));
     }
-    try {
-      const res = await fetch(u.toString(), { method:"GET", credentials:"include" });
-      const text = await res.text();
-      if (looksLikeHtml(text)) throw new Error("API 回傳 HTML（權限/登入導向/部署設定）。前 200 字：\n" + text.slice(0,200));
-      try { return JSON.parse(text); }
-      catch(_) { throw new Error("API 回傳非 JSON。前 200 字：\n" + text.slice(0,200)); }
-    } catch (err){
-      // 在本地 file:// 或跨來源靜態頁，fetch 可能直接丟 TypeError: NetworkError。
-      // 自動改用 JSONP（需後端支援 callback）。
-      log("GET_FALLBACK_JSONP action=" + action + " reason=" + String(err && err.message ? err.message : err));
-      if (isNetworkLikeError(err)) S.preferJsonp = true;
-      return apiGETJsonp(action, params);
-    }
-  }
 
-  async function apiPOST(action, payload={}){
-    try {
-      const res = await fetch(API_URL, {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        credentials:"include",
-        body: JSON.stringify({ action, ...payload })
-      });
-      const text = await res.text();
-      if (looksLikeHtml(text)){
-        // Apps Script 可能在 POST 時被 302 轉址，導致 body 遺失並回傳 HTML。
-        // 遇到此情況自動改走 GET + query payload。
-        log("POST_FALLBACK_GET action=" + action);
+    async function apiPOST(action, payload = {}) {
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ action, ...payload })
+        });
+        const text = await res.text();
+        if (looksLikeHtml(text)) {
+          logMsg("POST→GET " + action);
+          return apiGET(action, payload);
+        }
+        try { return JSON.parse(text); }
+        catch (_) { throw new Error("Non-JSON: " + text.slice(0, 200)); }
+      } catch (err) {
+        logMsg("POST→GET " + action + " reason=" + String(err.message || err));
         return apiGET(action, payload);
       }
-      try { return JSON.parse(text); }
-      catch(_) { throw new Error("API 回傳非 JSON。前 200 字：\n" + text.slice(0,200)); }
-    } catch (err){
-      // 在本地 file:// 或跨來源靜態頁，POST fetch 可能直接拋 NetworkError。
-      // 與 GET 一樣改走 query + JSONP fallback，避免「API OK 但 createRoom 失敗」。
-      log("POST_FALLBACK_GET action=" + action + " reason=" + String(err && err.message ? err.message : err));
-      return apiGET(action, payload);
     }
-  }
 
-  function showLobby(){
-    document.getElementById("viewLobby").style.display="";
-    document.getElementById("viewRoom").style.display="none";
-    stopSync();
-  }
-
-  function showRoom(){
-    document.getElementById("viewLobby").style.display="none";
-    document.getElementById("viewRoom").style.display="";
-  }
-
-  function renderRooms(rooms){
-    const tb = document.getElementById("roomsTbody");
-    tb.innerHTML="";
-    if (!rooms.length){
-      tb.innerHTML = `<tr><td colspan="5" class="small">沒有活躍房間</td></tr>`;
-      return;
+    // ===== View switching =====
+    function showLobby() {
+      DOM.viewLobby.classList.remove('hidden');
+      DOM.viewRoom.classList.add('hidden');
+      stopSync();
     }
-    for (const r of rooms){
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td class="mono">${r.roomId}</td>
-        <td>${r.state}</td>
-        <td>${r.playerCount||0}</td>
-        <td>${r.round||0}/${r.maxRounds||0}</td>
-        <td><button class="secondary">加入</button></td>
-      `;
-      tr.querySelector("button").onclick = ()=> joinRoomById(r.roomId);
-      tb.appendChild(tr);
+
+    function showRoom() {
+      DOM.viewLobby.classList.add('hidden');
+      DOM.viewRoom.classList.remove('hidden');
     }
-  }
 
-  function setLobbyLoading(v){
-    UI.lobbyLoading = !!v;
-    document.getElementById("btnRefresh").disabled = UI.lobbyLoading;
-    document.getElementById("btnCreateRoom").disabled = UI.lobbyLoading;
-    document.getElementById("btnJoinRoom").disabled = UI.lobbyLoading;
-  }
-
-  async function refreshLobby(){
-    showErr("lobbyError","");
-    if (UI.lobbyLoading) return;
-    const lobbyCode = normalizeLobbyCode(document.getElementById("lobbyCode").value);
-    if (!lobbyCode) {
-      showErr("lobbyError","房名至少 2 個字（可用中文/英文/數字）");
-      setStatus(false,"請先填房名");
-      return;
-    }
-    setLobbyLoading(true);
-    try {
-      setStatus(true,"載入房間列表…");
-      const out = await apiGET("listLobbyRooms", { lobbyCode });
-      if (!out.ok) throw new Error(out.error || "listLobbyRooms failed");
-      renderRooms(out.rooms || []);
-      setStatus(true,"大廳就緒");
-    } finally {
-      setLobbyLoading(false);
-    }
-  }
-
-  async function createRoom(){
-    showErr("lobbyError","");
-    const lobbyCode = normalizeLobbyCode(must(document.getElementById("lobbyCode").value,"房名/同場域代碼"));
-    if (!lobbyCode) throw new Error("房名至少 2 個字（可用中文/英文/數字）");
-    const name = must(document.getElementById("playerName").value,"你的名字").slice(0,18);
-
-    setStatus(true,"建立房間…");
-    const cr = await apiPOST("createRoom", { lobbyCode });
-    if (!cr.ok) throw new Error(cr.error || "createRoom failed");
-
-    const jr = await apiPOST("joinRoom", { roomId: cr.roomId, name });
-    if (!jr.ok) throw new Error(jr.error || "joinRoom failed");
-
-    S.roomId = cr.roomId;
-    S.hostToken = cr.hostToken || "";
-    S.playerId = jr.playerId || "";
-    S.name = name;
-    S.sinceEventId = 0;
-
-    enterRoom();
-  }
-
-  async function joinRoomById(roomId){
-    showErr("lobbyError","");
-    const name = must(document.getElementById("playerName").value,"你的名字").slice(0,18);
-    roomId = must(roomId,"roomId").trim();
-
-    setStatus(true,"加入房間…");
-    const jr = await apiPOST("joinRoom", { roomId, name });
-    if (!jr.ok) throw new Error(jr.error || "joinRoom failed");
-
-    S.roomId = roomId;
-    S.hostToken = "";   // 一般玩家
-    S.playerId = jr.playerId || "";
-    S.name = name;
-    S.sinceEventId = 0;
-
-    enterRoom();
-  }
-
-  function enterRoom(){
-    showRoom();
-    document.getElementById("roomIdText").textContent = S.roomId;
-    document.getElementById("meNameText").textContent = S.name;
-    document.getElementById("debugLog").textContent = "";
-    showErr("roomError","");
-    startSync();
-  }
-
-  async function sendBid(){
-    showErr("roomError","");
-    const bid = Number(document.getElementById("bidInput").value);
-    if (!Number.isFinite(bid) || bid < 0) throw new Error("出價必須是 >=0 的數字");
-    const round = Number(document.getElementById("roomRoundText").textContent || 0);
-    const out = await apiPOST("bid", { roomId:S.roomId, playerId:S.playerId, round, bid });
-    if (!out.ok) throw new Error(out.error || "bid failed");
-  }
-
-  async function startRoundHost(){
-    showErr("roomError","");
-    const out = await apiPOST("startRound", { roomId:S.roomId, hostToken:S.hostToken, playerId:S.playerId });
-    if (!out.ok) throw new Error(out.error || "startRound failed");
-  }
-
-  async function resolveHost(){
-    showErr("roomError","");
-    const out = await apiPOST("resolve", { roomId:S.roomId, hostToken:S.hostToken, playerId:S.playerId });
-    if (!out.ok) throw new Error(out.error || "resolve failed");
-  }
-
-  async function resetDatabaseAsHost(){
-    showErr("roomError", "");
-    if (!S.hostToken) throw new Error("只有房主可以重置資料庫");
-    const ok = window.confirm("確定要重置整個資料庫嗎？所有房間與玩家資料都會清空。");
-    if (!ok) return;
-
-    setStatus(true, "重置資料庫中…");
-    const out = await apiPOST("resetDatabase", { roomId:S.roomId, hostToken:S.hostToken });
-    if (!out.ok) throw new Error(out.error || "resetDatabase failed");
-
-    showLobby();
-    S.roomId = "";
-    S.playerId = "";
-    S.hostToken = "";
-    S.sinceEventId = 0;
-    document.getElementById("roomsTbody").innerHTML = `<tr><td colspan="5" class="small">尚未載入</td></tr>`;
-    setStatus(true, "資料庫已重置");
-  }
-
-  function stopSync(){ S.stop = true; }
-
-  function startSync(){
-    S.stop = false;
-    (async function loop(){
-      while(!S.stop){
-        try { await syncOnce(); }
-        catch(err){
-          showErr("roomError", String(err.message||err));
-          setStatus(false,"同步失敗");
-          log("SYNC_ERR:\n" + String(err.message||err));
-          await new Promise(r=>setTimeout(r,2500));
-        }
-        await new Promise(r=>setTimeout(r,1200));
-      }
-    })();
-  }
-
-  async function syncOnce(){
-    if (S.syncing) return;
-    S.syncing = true;
-    try{
-      const out = await apiGET("sync", {
-        roomId:S.roomId,
-        sinceEventId:S.sinceEventId,
-        playerId:S.playerId,
-        hostToken:S.hostToken
+    function showRoomState(state) {
+      ['stateLobby', 'stateBidding', 'stateReveal', 'statePostround', 'stateEnded'].forEach(id => {
+        DOM[id].classList.add('hidden');
       });
-      if (!out.ok) throw new Error(out.error || "sync failed");
+      const map = {
+        LOBBY: 'stateLobby', BIDDING: 'stateBidding',
+        REVEAL: 'stateReveal', POSTROUND: 'statePostround',
+        ENDED: 'stateEnded'
+      };
+      const target = map[state] || 'stateLobby';
+      DOM[target].classList.remove('hidden');
 
-      const room = out.room;
-      const players = out.players || [];
-      const events = out.events || [];
-
-      document.getElementById("roomStateText").textContent = room.state;
-      document.getElementById("roomRoundText").textContent = String(room.round||0);
-
-      const me = players.find(p=>p.playerId===S.playerId);
-      document.getElementById("meBudgetText").textContent = me ? String(me.budget) : "-";
-      document.getElementById("meScoreText").textContent = me ? String(me.score) : "-";
-
-      document.getElementById("playersBox").textContent =
-        players.map(p=>`${p.name}  budget=${p.budget} score=${p.score}${p.isHost?" (host)":""}`).join("\n") || "-";
-
-      const bidBox = document.getElementById("bidBox");
-      if (room.state === "BIDDING" && room.item){
-        bidBox.style.display="";
-        document.getElementById("itemNameText").textContent = room.item.name || "";
-        document.getElementById("itemHintText").textContent = room.item.publicHint || "";
-        document.getElementById("deadlineText").textContent = "截止：" + (room.bidDeadlineTs||0);
-      } else {
-        bidBox.style.display="none";
+      // Clear countdown when changing state
+      if (state !== S.lastState) {
+        clearCountdown();
+        S.lastState = state;
       }
-
-      const amHost = !!(S.hostToken || (me && me.isHost));
-      document.getElementById("btnStartRound").style.display = (amHost && room.state==="LOBBY") ? "" : "none";
-      document.getElementById("btnResolve").style.display = (amHost && room.state==="BIDDING") ? "" : "none";
-      document.getElementById("btnResetDb").style.display = S.hostToken ? "" : "none";
-
-      if (events.length){
-        const maxId = Math.max(...events.map(e=>Number(e.eventId||0)));
-        if (Number.isFinite(maxId) && maxId > S.sinceEventId) S.sinceEventId = maxId;
-        events.forEach(ev=>log(`#${ev.eventId} ${ev.type} ${ev.playerId||""} ${ev.payloadJson||""}`));
-      }
-
-      setStatus(true,"同步中… " + room.state);
-    } finally {
-      S.syncing = false;
     }
-  }
 
-  // ===== UI buttons =====
-  document.getElementById("btnRefresh").onclick = async ()=>{
-    try { await refreshLobby(); }
-    catch(err){ showErr("lobbyError", String(err.message||err)); setStatus(false,"刷新失敗"); log("REFRESH_ERR:\n"+String(err.message||err)); }
-  };
+    // ===== Lobby =====
+    function renderRooms(rooms) {
+      const tb = DOM.roomsTbody;
+      tb.innerHTML = "";
+      if (!rooms.length) {
+        tb.innerHTML = '<tr><td colspan="5" style="font-size:12px;color:var(--text-dim)">沒有活躍房間</td></tr>';
+        return;
+      }
+      for (const r of rooms) {
+        const stateMap = { LOBBY: '🟢 等待中', BIDDING: '🔴 出價中', REVEAL: '🟡 揭露中', POSTROUND: '📊 排行', ENDED: '🏁 結束' };
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+      <td style="font-family:monospace;font-weight:700">${r.roomId}</td>
+      <td style="font-size:12px">${stateMap[r.state] || r.state}</td>
+      <td>${r.playerCount || 0}</td>
+      <td>${r.round || 0}/${r.maxRounds || 0}</td>
+      <td><button class="small secondary">加入</button></td>
+    `;
+        tr.querySelector("button").onclick = () => joinRoomById(r.roomId);
+        tb.appendChild(tr);
+      }
+    }
 
-  document.getElementById("btnCreateRoom").onclick = async ()=>{
-    try { await createRoom(); }
-    catch(err){ showErr("lobbyError", String(err.message||err)); setStatus(false,"建立失敗"); log("CREATE_ERR:\n"+String(err.message||err)); }
-  };
+    let lobbyLoading = false;
+    function setLobbyLoading(v) {
+      lobbyLoading = !!v;
+      DOM.btnRefresh.disabled = lobbyLoading;
+      DOM.btnCreateRoom.disabled = lobbyLoading;
+      DOM.btnJoinRoom.disabled = lobbyLoading;
+    }
 
-  document.getElementById("btnJoinRoom").onclick = async ()=>{
-    try { await joinRoomById(document.getElementById("joinRoomId").value); }
-    catch(err){ showErr("lobbyError", String(err.message||err)); setStatus(false,"加入失敗"); log("JOIN_ERR:\n"+String(err.message||err)); }
-  };
+    async function refreshLobby() {
+      showErr('lobbyError', '');
+      if (lobbyLoading) return;
+      const lc = normalizeLobbyCode(DOM.lobbyCode.value);
+      if (!lc) { showErr('lobbyError', '房名至少 2 個字'); setStatus(false, '請先填房名'); return; }
+      setLobbyLoading(true);
+      try {
+        setStatus(true, '載入房間列表…');
+        const out = await apiGET("listLobbyRooms", { lobbyCode: lc });
+        if (!out.ok) throw new Error(out.error || "listLobbyRooms failed");
+        renderRooms(out.rooms || []);
+        setStatus(true, '大廳就緒');
+      } finally { setLobbyLoading(false); }
+    }
 
-  document.getElementById("btnLeave").onclick = ()=> { showLobby(); setStatus(true,"回到大廳"); };
+    async function createRoom() {
+      showErr('lobbyError', '');
+      const lc = normalizeLobbyCode(must(DOM.lobbyCode.value, '房名'));
+      if (!lc) throw new Error("房名至少 2 個字");
+      const name = must(DOM.playerName.value, '你的名字').slice(0, 18);
 
-  document.getElementById("btnBid").onclick = async ()=>{
-    try { await sendBid(); }
-    catch(err){ showErr("roomError", String(err.message||err)); setStatus(false,"出價失敗"); log("BID_ERR:\n"+String(err.message||err)); }
-  };
+      setStatus(true, '建立房間…');
+      const cr = await apiPOST("createRoom", { lobbyCode: lc });
+      if (!cr.ok) throw new Error(cr.error || "createRoom failed");
 
-  document.getElementById("btnStartRound").onclick = async ()=>{
-    try { await startRoundHost(); }
-    catch(err){ showErr("roomError", String(err.message||err)); setStatus(false,"開始回合失敗"); log("START_ROUND_ERR:\n"+String(err.message||err)); }
-  };
+      const jr = await apiPOST("joinRoom", { roomId: cr.roomId, name });
+      if (!jr.ok) throw new Error(jr.error || "joinRoom failed");
 
-  document.getElementById("btnResolve").onclick = async ()=>{
-    try { await resolveHost(); }
-    catch(err){ showErr("roomError", String(err.message||err)); setStatus(false,"結算失敗"); log("RESOLVE_ERR:\n"+String(err.message||err)); }
-  };
+      S.roomId = cr.roomId;
+      S.hostToken = cr.hostToken || "";
+      S.playerId = jr.playerId || "";
+      S.name = name;
+      S.sinceEventId = 0;
+      enterRoom();
+    }
 
-  document.getElementById("btnResetDb").onclick = async ()=>{
-    try { await resetDatabaseAsHost(); }
-    catch(err){ showErr("roomError", String(err.message||err)); setStatus(false,"重置失敗"); log("RESET_DB_ERR:\n"+String(err.message||err)); }
-  };
+    async function joinRoomById(roomId) {
+      showErr('lobbyError', '');
+      const name = must(DOM.playerName.value, '你的名字').slice(0, 18);
+      roomId = must(roomId, 'roomId').trim();
 
-  // 初始化DB（不必進 Apps Script 手動 Run）
-  document.getElementById("btnSetup").onclick = async ()=>{
-    showErr("lobbyError","");
-    try{
-      setStatus(true,"初始化DB…");
+      setStatus(true, '加入房間…');
+      const jr = await apiPOST("joinRoom", { roomId, name });
+      if (!jr.ok) throw new Error(jr.error || "joinRoom failed");
+
+      S.roomId = roomId;
+      S.hostToken = "";
+      S.playerId = jr.playerId || "";
+      S.name = name;
+      S.sinceEventId = 0;
+      enterRoom();
+    }
+
+    function enterRoom() {
+      showRoom();
+      DOM.roomIdText.textContent = S.roomId;
+      DOM.meNameText.textContent = S.name;
+      DOM.debugLog.textContent = "";
+      showErr('roomError', '');
+      startSync();
+    }
+
+    // ===== Countdown =====
+    function clearCountdown() {
+      if (S.countdownInterval) { clearInterval(S.countdownInterval); S.countdownInterval = null; }
+    }
+
+    function startCountdown(elId, deadlineMs, onZero) {
+      clearCountdown();
+      const el = DOM[elId];
+      function tick() {
+        const remaining = Math.max(0, Math.ceil((deadlineMs - Date.now()) / 1000));
+        el.textContent = remaining;
+        if (remaining <= 0) {
+          clearCountdown();
+          if (onZero) onZero();
+        }
+      }
+      tick();
+      S.countdownInterval = setInterval(tick, 500);
+    }
+
+    // ===== Render players =====
+    function renderPlayerList(containerId, players) {
+      const el = DOM[containerId];
+      if (!el) return;
+      if (!players || !players.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text-dim)">尚無玩家</div>'; return; }
+
+      el.innerHTML = players.map(p => `
+    <div class="player-row">
+      <span class="p-name">${p.isHost ? '👑 ' : ''}${escHtml(p.name)}${p.playerId === S.playerId ? ' (你)' : ''}</span>
+      <span class="p-stat">💰 ${p.budget}</span>
+      <span class="p-stat">⭐ ${p.score}</span>
+    </div>
+  `).join('');
+    }
+
+    function renderLeaderboard(containerId, players) {
+      const el = DOM[containerId];
+      if (!el) return;
+      const sorted = [...players].sort((a, b) => b.score - a.score);
+      const medals = ['🥇', '🥈', '🥉'];
+      el.innerHTML = sorted.map((p, i) => `
+    <div class="rank">
+      <span class="rank-num">${medals[i] || (i + 1)}</span>
+      <span class="rank-name">${p.isHost ? '👑 ' : ''}${escHtml(p.name)}${p.playerId === S.playerId ? ' (你)' : ''}</span>
+      <span>
+        <span class="rank-score">⭐ ${p.score}</span>
+        <span class="rank-budget">💰 ${p.budget}</span>
+      </span>
+    </div>
+  `).join('');
+    }
+
+    function renderCardHand(containerId, cards, roundNum, roomState) {
+      const el = DOM[containerId];
+      if (!el) return;
+      if (!cards || !cards.length) { el.innerHTML = '<span style="font-size:12px;color:var(--text-dim)">無手牌</span>'; return; }
+
+      el.innerHTML = cards.map(c => {
+        const canUse = c.count > 0 && roomState === 'BIDDING';
+        return `
+      <div class="card-item${canUse ? '' : ' used'}" data-card="${c.cardId}" data-round="${roundNum}" ${canUse ? '' : 'style="pointer-events:none"'}>
+        <div>${escHtml(c.name)}</div>
+        <div class="card-count">x${c.count}</div>
+      </div>
+    `;
+      }).join('');
+
+      el.querySelectorAll('.card-item:not(.used)').forEach(el => {
+        el.onclick = async () => {
+          const cardId = el.dataset.card;
+          const round = Number(el.dataset.round);
+          try {
+            el.classList.add('used');
+            const out = await apiPOST("playCard", { roomId: S.roomId, playerId: S.playerId, round, cardId });
+            if (!out.ok) throw new Error(out.error || "playCard failed");
+            logMsg("CARD_PLAYED: " + cardId);
+          } catch (err) {
+            showErr('roomError', String(err.message || err));
+            logMsg("CARD_ERR: " + String(err.message || err));
+          }
+        };
+      });
+    }
+
+    function escHtml(s) {
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    // ===== Sync =====
+    function stopSync() { S.stop = true; clearCountdown(); }
+
+    function startSync() {
+      S.stop = false;
+      (async function loop() {
+        while (!S.stop) {
+          try { await syncOnce(); }
+          catch (err) {
+            showErr('roomError', String(err.message || err));
+            setStatus(false, '同步失敗');
+            logMsg("SYNC_ERR: " + String(err.message || err));
+            await new Promise(r => setTimeout(r, 3000));
+          }
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      })();
+    }
+
+    async function syncOnce() {
+      if (S.syncing) return;
+      S.syncing = true;
+      try {
+        const out = await apiGET("sync", {
+          roomId: S.roomId, sinceEventId: S.sinceEventId,
+          playerId: S.playerId, hostToken: S.hostToken
+        });
+        if (!out.ok) throw new Error(out.error || "sync failed");
+
+        const room = out.room;
+        const players = out.players || [];
+        const events = out.events || [];
+        const myCards = out.myCards || [];
+        const resolveResult = out.resolveResult;
+        const peekHint = out.peekHint;
+        const myBid = out.myBid;
+
+        // Compute render hash to skip unnecessary DOM updates
+        const hash = JSON.stringify({
+          s: room.state, r: room.round, pc: players.length,
+          bd: room.bidDeadlineTs, rv: room.revealUntilTs, pt: room.postUntilTs,
+          rr: resolveResult ? resolveResult.winnerId : '', mb: myBid,
+          pl: players.map(p => p.playerId + p.budget + p.score).join(',')
+        });
+
+        if (hash === S.lastRenderHash) {
+          // Still update events
+          if (events.length) {
+            const maxId = Math.max(...events.map(e => Number(e.eventId || 0)));
+            if (Number.isFinite(maxId) && maxId > S.sinceEventId) S.sinceEventId = maxId;
+          }
+          return;
+        }
+        S.lastRenderHash = hash;
+
+        // Update room header
+        const stateLabels = { LOBBY: '🟢 等待中', BIDDING: '🔴 出價中', REVEAL: '🟡 揭露結果', POSTROUND: '📊 排行榜', ENDED: '🏁 結束' };
+        DOM.roomStatePill.textContent = stateLabels[room.state] || room.state;
+        DOM.roomRoundText.textContent = String(room.round || 0);
+        DOM.roomMaxText.textContent = String(room.maxRounds || 0);
+
+        const me = players.find(p => p.playerId === S.playerId);
+        DOM.meBudgetText.textContent = me ? String(me.budget) : "-";
+        DOM.meScoreText.textContent = me ? String(me.score) : "-";
+
+        const amHost = !!(S.hostToken || (me && me.isHost));
+
+        // Show/hide host-only elements
+        DOM.btnResetDb.classList.toggle('hidden', !S.hostToken);
+
+        // Switch state panels
+        showRoomState(room.state);
+
+        // === LOBBY ===
+        if (room.state === "LOBBY") {
+          renderPlayerList('playerListLobby', players);
+          DOM.btnStartRound.classList.toggle('hidden', !amHost);
+          DOM.hostSettingsCard.classList.toggle('hidden', !amHost);
+          if (amHost) {
+            // Only update if not focused
+            if (document.activeElement !== DOM.setMaxRounds)
+              DOM.setMaxRounds.value = room.maxRounds;
+            if (document.activeElement !== DOM.setRoundSeconds)
+              DOM.setRoundSeconds.value = room.roundSeconds;
+            if (document.activeElement !== DOM.setStartBudget)
+              DOM.setStartBudget.value = room.startingBudget;
+          }
+        }
+
+        // === BIDDING ===
+        if (room.state === "BIDDING") {
+          if (room.item) {
+            DOM.bidItemName.textContent = room.item.name || "-";
+            DOM.bidItemHint.textContent = room.item.publicHint || "";
+          }
+          // Peek hint
+          if (peekHint) {
+            DOM.peekHintBox.classList.remove('hidden');
+            DOM.peekHintBox.textContent = `🔮 偷看提示：真實價值在 ${peekHint.min} ~ ${peekHint.max} 之間`;
+          } else {
+            DOM.peekHintBox.classList.add('hidden');
+          }
+          // Countdown
+          if (room.bidDeadlineTs > 0 && !S.countdownInterval) {
+            startCountdown('bidCountdown', room.bidDeadlineTs);
+          }
+          // My bid
+          if (myBid !== null && myBid !== undefined) {
+            DOM.bidConfirmBox.classList.remove('hidden');
+            DOM.bidConfirmBox.textContent = `✅ 你已出價：${myBid}`;
+          } else {
+            DOM.bidConfirmBox.classList.add('hidden');
+          }
+          // Cards
+          renderCardHand('cardHandBidding', myCards, room.round, room.state);
+          // Host resolve button
+          DOM.btnResolve.classList.toggle('hidden', !amHost);
+          // Player list
+          renderPlayerList('playerListBidding', players);
+        }
+
+        // === REVEAL ===
+        if (room.state === "REVEAL") {
+          if (resolveResult) {
+            DOM.revealItemName.textContent = resolveResult.itemName || "-";
+            DOM.revealHiddenValue.textContent = String(resolveResult.hiddenValue || "?");
+            if (resolveResult.winnerId) {
+              DOM.revealWinner.textContent = resolveResult.winnerName || resolveResult.winnerId;
+              let detail = `出價 ${resolveResult.winnerBid}`;
+              if (resolveResult.taxApplied) detail += `（加稅後實付 ${resolveResult.actualCost}）`;
+              const delta = resolveResult.deltas && resolveResult.deltas[resolveResult.winnerId];
+              if (delta) {
+                const d = delta.delta;
+                const cls = d >= 0 ? 'delta-positive' : 'delta-negative';
+                detail += ` → 分數 <span class="${cls}">${d >= 0 ? '+' : ''}${d}</span>`;
+                if (delta.shieldApplied) detail += ' 🛡️護盾生效！';
+              }
+              DOM.revealDetail.innerHTML = detail;
+            } else {
+              DOM.revealWinner.textContent = "無人得標";
+              DOM.revealDetail.textContent = "所有人出價超過預算或無人出價";
+            }
+
+            // Show all player deltas
+            let deltasHtml = '';
+            players.forEach(p => {
+              const d = resolveResult.deltas && resolveResult.deltas[p.playerId];
+              if (d) {
+                const cls = d.delta >= 0 ? 'delta-positive' : 'delta-negative';
+                deltasHtml += `<div>${escHtml(p.name)}: <span class="${cls}">${d.delta >= 0 ? '+' : ''}${d.delta}</span></div>`;
+              }
+            });
+            DOM.revealDeltas.innerHTML = deltasHtml;
+          }
+          // Countdown
+          if (room.revealUntilTs > 0 && !S.countdownInterval) {
+            startCountdown('revealCountdown', room.revealUntilTs);
+          }
+        }
+
+        // === POSTROUND ===
+        if (room.state === "POSTROUND") {
+          renderLeaderboard('leaderboardBox', players);
+          DOM.btnNextRound.classList.toggle('hidden', !amHost);
+          if (amHost) {
+            DOM.postAutoText.textContent = "Host 可手動開始下一回合";
+          }
+          if (room.postUntilTs > 0 && !S.countdownInterval) {
+            startCountdown('postCountdown', room.postUntilTs);
+          }
+        }
+
+        // === ENDED ===
+        if (room.state === "ENDED") {
+          renderLeaderboard('leaderboardEndBox', players);
+          DOM.btnRestart.classList.toggle('hidden', !amHost);
+        }
+
+        // events
+        if (events.length) {
+          const maxId = Math.max(...events.map(e => Number(e.eventId || 0)));
+          if (Number.isFinite(maxId) && maxId > S.sinceEventId) S.sinceEventId = maxId;
+          events.forEach(ev => logMsg(`#${ev.eventId} ${ev.type} ${ev.playerId || ""} ${ev.payloadJson || ""}`));
+        }
+
+        setStatus(true, "同步中… " + (stateLabels[room.state] || room.state));
+      } finally {
+        S.syncing = false;
+      }
+    }
+
+    // ===== Actions =====
+    async function sendBid() {
+      showErr('roomError', '');
+      const bid = Number(DOM.bidInput.value);
+      if (!Number.isFinite(bid) || bid < 0) throw new Error("出價必須 ≥ 0");
+      const round = Number(DOM.roomRoundText.textContent || 0);
+      const out = await apiPOST("bid", { roomId: S.roomId, playerId: S.playerId, round, bid });
+      if (!out.ok) throw new Error(out.error || "bid failed");
+      DOM.bidConfirmBox.classList.remove('hidden');
+      DOM.bidConfirmBox.textContent = `✅ 你已出價：${bid}`;
+      S.lastRenderHash = ""; // force re-render
+    }
+
+    async function startRoundHost() {
+      showErr('roomError', '');
+      const out = await apiPOST("startRound", { roomId: S.roomId, hostToken: S.hostToken, playerId: S.playerId });
+      if (!out.ok) throw new Error(out.error || "startRound failed");
+      S.lastRenderHash = "";
+    }
+
+    async function resolveHost() {
+      showErr('roomError', '');
+      const out = await apiPOST("resolve", { roomId: S.roomId, hostToken: S.hostToken, playerId: S.playerId });
+      if (!out.ok) throw new Error(out.error || "resolve failed");
+      S.lastRenderHash = "";
+    }
+
+    async function nextRoundHost() {
+      showErr('roomError', '');
+      const out = await apiPOST("startRound", { roomId: S.roomId, hostToken: S.hostToken, playerId: S.playerId });
+      if (!out.ok) throw new Error(out.error || "startRound failed");
+      S.lastRenderHash = "";
+    }
+
+    async function saveSettings() {
+      showErr('roomError', '');
+      const out = await apiPOST("updateSettings", {
+        roomId: S.roomId, hostToken: S.hostToken, playerId: S.playerId,
+        maxRounds: Number(DOM.setMaxRounds.value || 8),
+        roundSeconds: Number(DOM.setRoundSeconds.value || 25),
+        startingBudget: Number(DOM.setStartBudget.value || 100)
+      });
+      if (!out.ok) throw new Error(out.error || "updateSettings failed");
+      setStatus(true, '設定已儲存');
+      S.lastRenderHash = "";
+    }
+
+    async function resetDatabaseAsHost() {
+      showErr('roomError', '');
+      if (!S.hostToken) throw new Error("只有房主可以重置");
+      if (!confirm("確定要重置所有資料嗎？")) return;
+      setStatus(true, '重置中…');
+      const out = await apiPOST("resetDatabase", { roomId: S.roomId, hostToken: S.hostToken });
+      if (!out.ok) throw new Error(out.error || "reset failed");
+      showLobby();
+      S.roomId = ""; S.playerId = ""; S.hostToken = ""; S.sinceEventId = 0; S.lastRenderHash = "";
+      DOM.roomsTbody.innerHTML = '<tr><td colspan="5" style="font-size:12px;color:var(--text-dim)">已重置</td></tr>';
+      setStatus(true, '資料庫已重置');
+    }
+
+    // ===== Wire up buttons =====
+    function wireBtn(id, fn) {
+      DOM[id].onclick = async () => {
+        try { await fn(); }
+        catch (err) {
+          const errTarget = DOM.viewRoom.classList.contains('hidden') ? 'lobbyError' : 'roomError';
+          showErr(errTarget, String(err.message || err));
+          setStatus(false, '操作失敗');
+          logMsg("ERR: " + String(err.message || err));
+        }
+      };
+    }
+
+    wireBtn('btnRefresh', refreshLobby);
+    wireBtn('btnCreateRoom', createRoom);
+    wireBtn('btnJoinRoom', () => joinRoomById(DOM.joinRoomId.value));
+    wireBtn('btnLeave', async () => { showLobby(); setStatus(true, '回到大廳'); });
+    wireBtn('btnBid', sendBid);
+    wireBtn('btnStartRound', startRoundHost);
+    wireBtn('btnResolve', resolveHost);
+    wireBtn('btnNextRound', nextRoundHost);
+    wireBtn('btnResetDb', resetDatabaseAsHost);
+    wireBtn('btnSaveSettings', saveSettings);
+    wireBtn('btnRestart', async () => {
+      // Reset and go back to lobby
+      showLobby();
+      setStatus(true, '遊戲結束，回到大廳');
+    });
+
+    wireBtn('btnSetup', async () => {
+      showErr('lobbyError', '');
+      setStatus(true, '初始化DB…');
       const out = await apiPOST("setup", {});
       if (!out.ok) throw new Error(out.error || "setup failed");
-      setStatus(true,"初始化完成（Rooms/Players/Events/Items/PlayerCards 應該出現）");
-    }catch(err){
-      setStatus(false,"初始化失敗");
-      showErr("lobbyError", String(err.message||err));
-      log("SETUP_ERR:\n"+String(err.message||err));
-    }
-  };
+      setStatus(true, 'DB 初始化完成');
+    });
 
-  // 測試 API：debugInfo
-  document.getElementById("btnDebug").onclick = async ()=>{
-    showErr("lobbyError","");
-    try{
-      setStatus(true,"測試 API…");
+    wireBtn('btnDebug', async () => {
+      showErr('lobbyError', '');
+      setStatus(true, '測試 API…');
       const out = await apiGET("debugInfo", {});
       if (!out.ok) throw new Error(out.error || "debugInfo failed");
-      setStatus(true,"API OK（已回 JSON）");
-      log("DEBUG_OK:\n"+JSON.stringify(out, null, 2));
-    }catch(err){
-      setStatus(false,"API 測試失敗");
-      showErr("lobbyError", String(err.message||err));
-      log("DEBUG_ERR:\n"+String(err.message||err));
-    }
-  };
+      setStatus(true, 'API OK ✓');
+      logMsg("DEBUG:\n" + JSON.stringify(out, null, 2));
+    });
 
-  // ===== init =====
-  (function initFromUrl(){
-    try{
-      const u = new URL(window.location.href);
-      const rid = u.searchParams.get("roomId");
-      if (rid) document.getElementById("joinRoomId").value = rid;
-    }catch(_){}
-    setStatus(true,"大廳就緒");
-  })();
+    // Debug toggle
+    DOM.debugToggle.onclick = () => {
+      DOM.debugLog.classList.toggle('hidden');
+      DOM.debugToggle.textContent = DOM.debugLog.classList.contains('hidden') ? '▶ Debug Log' : '▼ Debug Log';
+    };
 
-  // 全域攔截：避免「看起來不能動但其實在爆錯」
-  window.addEventListener("unhandledrejection", (e)=>{
-    setStatus(false,"前端 Promise 例外");
-    const msg = String(e.reason?.message || e.reason || "unknown");
-    showErr("lobbyError", msg);
-    log("UNHANDLED_REJECTION:\n"+msg);
-  });
-  window.addEventListener("error", (e)=>{
-    setStatus(false,"前端錯誤");
-    const msg = String(e.message || "unknown");
-    showErr("lobbyError", msg);
-    log("WINDOW_ERROR:\n"+msg);
-  });
-</script>
+    // ===== Init =====
+    (function init() {
+      try {
+        const u = new URL(window.location.href);
+        const rid = u.searchParams.get("roomId");
+        if (rid) DOM.joinRoomId.value = rid;
+      } catch (_) { }
+      setStatus(true, '大廳就緒');
+    })();
+
+    // Global error handlers
+    window.addEventListener("unhandledrejection", e => {
+      const msg = String(e.reason?.message || e.reason || "unknown");
+      logMsg("UNHANDLED: " + msg);
+    });
+    window.addEventListener("error", e => {
+      logMsg("ERROR: " + String(e.message || "unknown"));
+    });
+  </script>
 </body>
+
 </html>
