@@ -99,6 +99,8 @@ function routeAction_(action, p) {
     case "resolve":         return apiResolve_(p);
     case "playCard":        return apiPlayCard_(p);
     case "nextRound":       return apiStartRound_(p);  // nextRound 複用 startRound 邏輯
+    case "restartGame":     return apiRestartGame_(p);
+    case "kickPlayer":      return apiKickPlayer_(p);
     case "resetDatabase":   return apiResetDatabase_(p);
     default: return { ok: false, error: "UNKNOWN_ACTION:" + action };
   }
@@ -213,8 +215,11 @@ function ensureSheet_(ss, name, headers) {
   return sh;
 }
 
-/** 讀取整張表的 headers + data rows */
+/** 讀取整張表的 headers + data rows（防禦 null sheet） */
 function readAll_(sh) {
+  if (!sh) return { headers: [], rows: [] };
+  const last = sh.getLastRow();
+  if (last < 1) return { headers: [], rows: [] };
   const vals = sh.getDataRange().getValues();
   if (vals.length <= 1) return { headers: vals[0] || [], rows: [] };
   return { headers: vals[0], rows: vals.slice(1) };
@@ -255,11 +260,11 @@ function setRow_(sh, rowIndex, row) {
   sh.getRange(rowIndex, 1, 1, row.length).setValues([row]);
 }
 
-/** 清除 header 以外的所有資料列 */
-function clearSheetDataRows_(sh, width) {
+/** 清除 header 以外的所有資料列（刪除整列避免 ghost rows） */
+function clearSheetDataRows_(sh, _width) {
   const last = sh.getLastRow();
   if (last <= 1) return;
-  sh.getRange(2, 1, last - 1, width).clearContent();
+  sh.deleteRows(2, last - 1);
 }
 
 /** 在 Rooms 表中以 roomId 尋找列（封裝 findRowIndex_） */
@@ -267,18 +272,113 @@ function findRoomRow_(roomsSheet, roomId) {
   return findRowIndex_(roomsSheet, 0, roomId);
 }
 
-/** 寫入 seed items（初始化用） */
+/** 寫入 seed items（100 項，每次 hiddenValue 隨機） */
 function seedItems_(itemsSheet) {
-  const seed = [
-    ["ITM1", "神秘古董", "看起來很值錢，但可能是垃圾", 30],
-    ["ITM2", "限量公仔", "大家都說會漲價",            25],
-    ["ITM3", "二手筆電", "螢幕有刮痕，但能用",        18],
-    ["ITM4", "奇怪的箱子", "搖一搖會響",              22],
-    ["ITM5", "無敵券",   "規則外的力量感",             35],
-    ["ITM6", "金元寶",   "閃閃發光的黃金",             40],
-    ["ITM7", "紅包",     "裡面會放多少呢？",           15],
-    ["ITM8", "古董花瓶", "據說是明朝的…",              28]
+  // [itemId, name, publicHint, minValue, maxValue]  — hiddenValue 在 min~max 間隨機
+  const defs = [
+    ["ITM001", "神秘古董",       "看起來很值錢，但可能是垃圾",   10, 60],
+    ["ITM002", "限量公仔",       "大家都說會漲價",               15, 50],
+    ["ITM003", "二手筆電",       "螢幕有刮痕，但能用",           10, 35],
+    ["ITM004", "奇怪的箱子",     "搖一搖會響",                   5,  45],
+    ["ITM005", "無敵券",         "規則外的力量感",               20, 70],
+    ["ITM006", "金元寶",         "閃閃發光的黃金",               30, 80],
+    ["ITM007", "紅包",           "裡面會放多少呢？",             5,  40],
+    ["ITM008", "古董花瓶",       "據說是明朝的…",                15, 55],
+    ["ITM009", "翡翠手鐲",       "通透碧綠，不知真假",           20, 90],
+    ["ITM010", "舊照相機",       "底片還能用嗎？",               5,  25],
+    ["ITM011", "名牌手錶",       "錶帶有點舊，但機芯很順",       30, 95],
+    ["ITM012", "破損的吉他",     "缺一根弦",                     3,  15],
+    ["ITM013", "陳年紅酒",       "1990 年份，保存狀況未知",       20, 75],
+    ["ITM014", "貓咪背包",       "毛茸茸的設計，很搶眼",         8,  35],
+    ["ITM015", "VR 眼鏡",        "二手的，鏡片有點花",           15, 45],
+    ["ITM016", "黃金魚鉤",       "據說能釣到龍王",               20, 70],
+    ["ITM017", "過期零食",       "已經過期三天了",               1,  10],
+    ["ITM018", "鑽石耳環",       "小小一顆，閃閃的",             40, 100],
+    ["ITM019", "手工肥皂",       "薰衣草味，很香",               3,  18],
+    ["ITM020", "古地圖",         "標示著寶藏位置？",             15, 65],
+    ["ITM021", "智慧音箱",       "只支援英文指令",               10, 35],
+    ["ITM022", "生鏽寶劍",       "劍身刻著奇怪的文字",           12, 55],
+    ["ITM023", "蘭花盆栽",       "開了三朵，很漂亮",             10, 40],
+    ["ITM024", "簽名棒球",       "看不清是誰的簽名",             15, 75],
+    ["ITM025", "機械鍵盤",       "Cherry 軟軸，手感一流",        20, 55],
+    ["ITM026", "迷你無人機",     "電池續航 5 分鐘",              12, 45],
+    ["ITM027", "神秘藥水",       "瓶身寫著『喝了變強』",         5,  30],
+    ["ITM028", "油畫作品",       "署名看不清楚",                 25, 90],
+    ["ITM029", "復古收音機",     "還能收到 FM 電台",             8,  30],
+    ["ITM030", "水晶球",         "裡面有氣泡，閃閃發光",         15, 55],
+    ["ITM031", "狗狗雨衣",       "XL 號，適合大型犬",            5,  20],
+    ["ITM032", "珍珠項鍊",       "每顆大小不太一致",             20, 80],
+    ["ITM033", "二手遊戲機",     "附兩個手把",                   20, 60],
+    ["ITM034", "瑜伽墊",         "微微有使用痕跡",               3,  15],
+    ["ITM035", "銀色懷錶",       "能走，但偶爾慢幾分鐘",         15, 55],
+    ["ITM036", "神秘信封",       "封口用火漆封著",               5,  45],
+    ["ITM037", "有機蜂蜜",       "農場直送，純天然",             8,  28],
+    ["ITM038", "電競滑鼠",       "RGB 燈效全開",                 12, 40],
+    ["ITM039", "陶瓷茶壺",       "日式風格，釉色美麗",           15, 50],
+    ["ITM040", "登山背包",       "60 公升，防水材質",             18, 55],
+    ["ITM041", "古銅色指南針",   "磁針還能動",                   10, 35],
+    ["ITM042", "手繪撲克牌",     "每張都是獨特畫作",             12, 45],
+    ["ITM043", "桌上型風扇",     "三段風速，有點吵",             3,  18],
+    ["ITM044", "鍍金相框",       "適合放全家福",                 5,  25],
+    ["ITM045", "真皮皮夾",       "義大利進口，有壓紋",           20, 65],
+    ["ITM046", "迷你投影機",     "畫質勉強能看",                 15, 55],
+    ["ITM047", "竹編籃子",       "手工製作，很精緻",             5,  22],
+    ["ITM048", "大理石棋盤",     "附完整棋子",                   20, 70],
+    ["ITM049", "香氛蠟燭組",     "六種味道",                     8,  30],
+    ["ITM050", "折疊腳踏車",     "輪胎需要打氣",                 25, 80],
+    ["ITM051", "老式打字機",     "鍵帽有些卡住",                 15, 50],
+    ["ITM052", "太陽能充電器",   "陰天充電超慢",                 8,  35],
+    ["ITM053", "手沖咖啡組",     "含磨豆機和濾杯",               12, 45],
+    ["ITM054", "毛筆套組",       "書法愛好者必備",               5,  25],
+    ["ITM055", "藍芽喇叭",       "防水，音質不錯",               15, 50],
+    ["ITM056", "盆栽仙人掌",     "三年沒澆水都活著",             3,  15],
+    ["ITM057", "皮革公事包",     "有商務質感",                   25, 70],
+    ["ITM058", "復古桌燈",       "鎢絲燈泡，暖黃光",             10, 35],
+    ["ITM059", "木雕擺件",       "手工雕刻的貓頭鷹",             15, 55],
+    ["ITM060", "行李秤",         "出國旅行神器",                 3,  18],
+    ["ITM061", "紫砂茶壺",       "刻有大師印章",                 40, 100],
+    ["ITM062", "寵物自動餵食器", "可設定時間",                   10, 40],
+    ["ITM063", "古典吊燈",       "需要重新接電線",               18, 60],
+    ["ITM064", "天文望遠鏡",     "入門款，能看月球坑洞",         25, 80],
+    ["ITM065", "手工皮帶",       "牛皮材質，銅扣環",             12, 45],
+    ["ITM066", "老唱片",         "鄧麗君經典專輯",               15, 55],
+    ["ITM067", "保溫便當盒",     "三層式，很實用",               5,  25],
+    ["ITM068", "迷彩帳篷",       "雙人帳，附營釘",               20, 65],
+    ["ITM069", "骨董電話",       "轉盤式，充滿年代感",           15, 50],
+    ["ITM070", "水彩顏料組",     "24 色專業級",                  8,  35],
+    ["ITM071", "黑膠唱片機",     "復古造型，能正常播放",         30, 90],
+    ["ITM072", "編織毛毯",       "手工羊毛，冬天暖和",           10, 40],
+    ["ITM073", "象棋組",         "檀木材質，質感好",             18, 60],
+    ["ITM074", "螢幕掛燈",       "護眼不反光",                   10, 35],
+    ["ITM075", "露營椅",         "鋁合金骨架，輕便",             8,  30],
+    ["ITM076", "琥珀墜飾",       "裡面好像有蟲子",               20, 80],
+    ["ITM077", "按摩槍",         "三段力道，筋膜放鬆",           15, 55],
+    ["ITM078", "傳統摺扇",       "檀香木骨架",                   8,  35],
+    ["ITM079", "電子書閱讀器",   "螢幕有一條淡淡的線",           18, 60],
+    ["ITM080", "手工果醬",       "季節限定草莓口味",             3,  20],
+    ["ITM081", "黃銅燭台",       "成對的，很有氣氛",             12, 45],
+    ["ITM082", "運動水壺",       "保冷 24 小時",                 5,  25],
+    ["ITM083", "老式鐘擺鐘",     "每小時會響一次",               25, 80],
+    ["ITM084", "手作陶杯",       "釉色獨一無二",                 8,  30],
+    ["ITM085", "防水相機",       "適合水下攝影",                 20, 70],
+    ["ITM086", "薄荷精油",       "提神醒腦好物",                 3,  18],
+    ["ITM087", "紀念幣套組",     "十二生肖完整版",               30, 90],
+    ["ITM088", "羽毛筆",         "附墨水瓶",                     5,  25],
+    ["ITM089", "空拍機零件",     "不確定能不能裝上",             2,  15],
+    ["ITM090", "日式風鈴",       "玻璃材質，聲音清脆",           5,  20],
+    ["ITM091", "皮革日記本",     "附鎖扣，很有質感",             10, 35],
+    ["ITM092", "迷你魚缸",       "含過濾器和LED燈",              10, 40],
+    ["ITM093", "古董懷爐",       "銅製的，可以用現代油",         12, 50],
+    ["ITM094", "摺紙藝術品",     "1000 隻紙鶴串",                8,  35],
+    ["ITM095", "手工吉他撥片",   "玳瑁材質，音色溫暖",           5,  25],
+    ["ITM096", "景泰藍花瓶",     "掐絲琺瑯工藝",                35, 100],
+    ["ITM097", "貓眼石戒指",     "有神秘光芒在流動",             25, 85],
+    ["ITM098", "老式地球儀",     "還是蘇聯時代的版本",           15, 55],
+    ["ITM099", "機械式鋼筆",     "14K 金筆尖，書寫流暢",        20, 70],
+    ["ITM100", "龍銀(舊台幣)",   "日治時期流通的銀幣",           40, 100]
   ];
+  // 每次隨機生成 hiddenValue
+  const seed = defs.map(d => [d[0], d[1], d[2], d[3] + Math.floor(Math.random() * (d[4] - d[3] + 1))]);
   itemsSheet.getRange(2, 1, seed.length, 4).setValues(seed);
 }
 
@@ -322,10 +422,11 @@ function apiSetup_() {
       "roomId", "playerId", "cardId", "name", "desc", "count"
     ]);
 
-    // Seed items（僅首次）
+    // Seed items（僅首次 — 避免遊戲進行中重新整理頁面時改變物品價值）
     const items = ss.getSheetByName(TABS.ITEMS);
     if (items.getLastRow() < 2) seedItems_(items);
 
+    SpreadsheetApp.flush();
     return { ok: true };
   });
 }
@@ -367,6 +468,9 @@ function apiCreateRoom_(p) {
       "", ""   // revealUntilTs, postUntilTs
     ]);
 
+    // 強制寫入：確保其他使用者的 listLobbyRooms 能立即看到新房間
+    SpreadsheetApp.flush();
+
     addEvent_(roomId, "ROOM_CREATED", "", { lobbyCode });
     return { ok: true, roomId, hostToken };
   });
@@ -374,11 +478,14 @@ function apiCreateRoom_(p) {
 
 /**
  * 加入房間
- * 第一個加入的人自動成為 Host，並獲得起始手牌
+ * - 若帶有正確的 hostToken，該玩家標記為 Host（解決 race condition）
+ * - 否則若房間內無人，第一個加入者自動成為 Host
+ * - 發放初始手牌
  */
 function apiJoinRoom_(p) {
-  const roomId = String(p.roomId || "").trim();
-  const name   = String(p.name   || "").trim().slice(0, 18);
+  const roomId   = String(p.roomId   || "").trim();
+  const name     = String(p.name     || "").trim().slice(0, 18);
+  const joinHostToken = String(p.hostToken || "").trim();  // 建房者帶入的 hostToken
   if (!roomId) return { ok: false, error: "MISSING_ROOMID" };
   if (!name)   return { ok: false, error: "MISSING_NAME" };
 
@@ -403,7 +510,11 @@ function apiJoinRoom_(p) {
     const roomHeaders = rooms.getRange(1, 1, 1, rooms.getLastColumn()).getValues()[0];
     const rim = idxMap_(roomHeaders);
 
-    const isHost = (count === 0);  // 第一個人 = Host
+    // 判定 Host 身分：
+    // 1. 若帶有正確的 hostToken → 一定是 Host（建房者）
+    // 2. 否則若房間內無人 → 第一個加入者為 Host
+    const realHostToken = String(roomRow[rim.hostToken] || "");
+    const isHost = (joinHostToken && joinHostToken === realHostToken) || (count === 0);
     const startingBudget = Number(roomRow[rim.startingBudget] || 100);
 
     appendRow_(players, [
@@ -419,20 +530,94 @@ function apiJoinRoom_(p) {
     setRow_(rooms, roomRowIdx, roomRow);
 
     addEvent_(roomId, "PLAYER_JOINED", playerId, { name, isHost });
+
+    // 強制寫入：確保其他玩家的 sync 能立即看到新加入的玩家
+    SpreadsheetApp.flush();
+
     return { ok: true, playerId };
   });
 }
 
 /**
- * 列出指定 lobbyCode 下的活躍房間（15 分鐘內有更新）
+ * Host 踢除玩家（刪除 Players + Cards 中該玩家的資料）
+ */
+function apiKickPlayer_(p) {
+  const roomId       = String(p.roomId       || "").trim();
+  const hostToken    = String(p.hostToken    || "").trim();
+  const playerId     = String(p.playerId     || "").trim();
+  const targetId     = String(p.targetPlayerId || "").trim();
+  if (!roomId)   return { ok: false, error: "MISSING_ROOMID" };
+  if (!targetId) return { ok: false, error: "MISSING_TARGET" };
+
+  return withLock_(() => {
+    const ss = db_();
+    const rooms   = ss.getSheetByName(TABS.ROOMS);
+    const players = ss.getSheetByName(TABS.PLAYERS);
+    const cards   = ss.getSheetByName(TABS.CARDS);
+
+    const roomRowIdx = findRoomRow_(rooms, roomId);
+    if (roomRowIdx < 0) return { ok: false, error: "ROOM_NOT_FOUND" };
+
+    const roomHeaders = rooms.getRange(1, 1, 1, rooms.getLastColumn()).getValues()[0];
+    const rim = idxMap_(roomHeaders);
+    const rr  = getRow_(rooms, roomRowIdx, rooms.getLastColumn());
+
+    if (!canManageRoom_(ss, roomId, hostToken, playerId, rr, rim))
+      return { ok: false, error: "HOST_PERMISSION_DENIED" };
+
+    // 不能踢自己
+    if (targetId === playerId) return { ok: false, error: "CANNOT_KICK_SELF" };
+
+    // 刪除目標玩家（從下往上刪避免 row shift 問題）
+    const pAll = readAll_(players);
+    const pim  = idxMap_(pAll.headers);
+    let found = false;
+    for (let i = pAll.rows.length - 1; i >= 0; i--) {
+      const pr = pAll.rows[i];
+      if (String(pr[pim.roomId]) !== roomId) continue;
+      if (String(pr[pim.playerId]) !== targetId) continue;
+      players.deleteRow(i + 2);
+      found = true;
+    }
+    if (!found) return { ok: false, error: "PLAYER_NOT_FOUND" };
+
+    // 刪除該玩家的卡片
+    if (cards) {
+      const cAll = readAll_(cards);
+      const cim  = idxMap_(cAll.headers);
+      for (let i = cAll.rows.length - 1; i >= 0; i--) {
+        const cr = cAll.rows[i];
+        if (String(cr[cim.roomId]) !== roomId) continue;
+        if (String(cr[cim.playerId]) !== targetId) continue;
+        cards.deleteRow(i + 2);
+      }
+    }
+
+    addEvent_(roomId, "PLAYER_KICKED", targetId, { by: playerId });
+    touchRoomUpdatedAt_(roomId);
+    SpreadsheetApp.flush();
+    return { ok: true };
+  });
+}
+
+/**
+ * 列出活躍房間（15 分鐘內有更新）
+ * lobbyCode 為可選參數：有填則過濾該場域，空值則列出所有房間
  */
 function apiListLobbyRooms_(p) {
-  const lobbyCode = normalizeLobbyCode_(p.lobbyCode);
-  if (!lobbyCode) return { ok: false, error: "MISSING_LOBBYCODE" };
+  const lobbyCode = normalizeLobbyCode_(p.lobbyCode);  // 可能為空字串
 
   const ss      = db_();
-  const rooms   = ss.getSheetByName(TABS.ROOMS);
-  const players = ss.getSheetByName(TABS.PLAYERS);
+  let rooms   = ss.getSheetByName(TABS.ROOMS);
+  let players = ss.getSheetByName(TABS.PLAYERS);
+
+  // 若表不存在則自動初始化
+  if (!rooms || !players) {
+    apiSetup_();
+    rooms   = ss.getSheetByName(TABS.ROOMS);
+    players = ss.getSheetByName(TABS.PLAYERS);
+  }
+  if (!rooms || !players) return { ok: true, rooms: [] };
 
   const rAll = readAll_(rooms);
   const rim  = idxMap_(rAll.headers);
@@ -443,20 +628,26 @@ function apiListLobbyRooms_(p) {
   const out = [];
 
   rAll.rows.forEach(r => {
-    // 比對 lobbyCode
-    if (String(r[rim.lobbyCode]) !== lobbyCode) return;
+    const rowLobby = String(r[rim.lobbyCode] || "");
+
+    // 若有指定 lobbyCode，則只顯示該場域的房間
+    if (lobbyCode && rowLobby !== lobbyCode) return;
 
     // 過濾太久沒更新的房間
     const updatedAt = Number(r[rim.updatedAt] || 0);
     if (now - updatedAt > ROOM_ACTIVE_MS) return;
 
+    // 跳過 roomId 為空的列（可能是 clearContent 殘留的空行）
+    const rid = String(r[rim.roomId] || "").trim();
+    if (!rid) return;
+
     // 計算玩家數
-    const rid = String(r[rim.roomId]);
     let pc = 0;
     pAll.rows.forEach(pr => { if (String(pr[pim.roomId]) === rid) pc++; });
 
     out.push({
       roomId: rid,
+      lobbyCode: rowLobby,
       state: String(r[rim.state]),
       round: Number(r[rim.round] || 0),
       maxRounds: Number(r[rim.maxRounds] || 0),
@@ -738,9 +929,10 @@ function doResolve_(ss, rooms, idx, r, rim, roomId) {
   const eAll = readAll_(events);
   const eim  = idxMap_(eAll.headers);
   const lastBid    = {};   // playerId → 最後一次出價金額
+  const bidOrder   = {};   // playerId → 該出價在 events 中的索引（用於 tie-break）
   const cardPlayed = {};   // playerId → [cardId, ...]
 
-  eAll.rows.forEach(er => {
+  eAll.rows.forEach((er, idx) => {
     if (String(er[eim.roomId]) !== roomId) return;
     const type = String(er[eim.type]);
     const pid  = String(er[eim.playerId] || "");
@@ -748,7 +940,8 @@ function doResolve_(ss, rooms, idx, r, rim, roomId) {
     try { payload = JSON.parse(String(er[eim.payloadJson] || "{}")); } catch (_) {}
 
     if (type === "BID" && Number(payload.round) === round) {
-      lastBid[pid] = Number(payload.bid || 0);
+      lastBid[pid]  = Number(payload.bid || 0);
+      bidOrder[pid] = idx;  // 越後面 = 越晚出價
     }
     if (type === "CARD_PLAYED" && Number(payload.round) === round) {
       if (!cardPlayed[pid]) cardPlayed[pid] = [];
@@ -757,8 +950,10 @@ function doResolve_(ss, rooms, idx, r, rim, roomId) {
   });
 
   // 找出得標者：出價最高且 ≤ 預算的玩家
+  // Tie-break：同出價時，先出價者（bidOrder 較小）得標
   let winnerId  = "";
   let winnerBid = -1;
+  let winnerOrder = Infinity;
 
   Object.keys(lastBid).forEach(pid => {
     const bid = lastBid[pid];
@@ -767,7 +962,10 @@ function doResolve_(ss, rooms, idx, r, rim, roomId) {
     const row    = getRow_(players, rowIdx, players.getLastColumn());
     const budget = Number(row[pim.budget] || 0);
     if (bid > budget) return;          // 超過預算 → 無效
-    if (bid > winnerBid) { winnerBid = bid; winnerId = pid; }
+    const order = bidOrder[pid] || 0;
+    if (bid > winnerBid || (bid === winnerBid && order < winnerOrder)) {
+      winnerBid = bid; winnerId = pid; winnerOrder = order;
+    }
   });
 
   // 卡牌效果：Tax（加稅 +20%）
@@ -947,7 +1145,10 @@ function apiStartRound_(p) {
   });
 }
 
-/** 玩家送出出價（同回合可多次更新，結算取最後一次） */
+/**
+ * 玩家送出出價（同回合可多次更新，結算取最後一次）
+ * 會驗證房間處於 BIDDING 狀態且回合數一致
+ */
 function apiBid_(p) {
   const roomId   = String(p.roomId   || "").trim().toUpperCase();
   const playerId = String(p.playerId || "").trim();
@@ -959,6 +1160,19 @@ function apiBid_(p) {
   if (!Number.isFinite(bid)   || bid < 0)    return { ok: false, error: "BAD_BID" };
 
   return withLock_(() => {
+    // 驗證房間狀態
+    const ss    = db_();
+    const rooms = ss.getSheetByName(TABS.ROOMS);
+    const idx   = findRoomRow_(rooms, roomId);
+    if (idx < 0) return { ok: false, error: "ROOM_NOT_FOUND" };
+    const headers = rooms.getRange(1, 1, 1, rooms.getLastColumn()).getValues()[0];
+    const rim = idxMap_(headers);
+    const r   = getRow_(rooms, idx, rooms.getLastColumn());
+    if (String(r[rim.state]) !== "BIDDING")
+      return { ok: false, error: "NOT_IN_BIDDING" };
+    if (Number(r[rim.round] || 0) !== round)
+      return { ok: false, error: "ROUND_MISMATCH" };
+
     addEvent_(roomId, "BID", playerId, { round, bid });
     touchRoomUpdatedAt_(roomId);
     return { ok: true };
@@ -1004,6 +1218,76 @@ function apiPlayCard_(p) {
 }
 
 /**
+ * Host 重新開始遊戲（不離開房間）
+ * 將房間重設為 LOBBY 狀態，重設所有玩家 budget/score，重新發牌
+ */
+function apiRestartGame_(p) {
+  const roomId    = String(p.roomId    || "").trim().toUpperCase();
+  const hostToken = String(p.hostToken || "").trim();
+  const playerId  = String(p.playerId  || "").trim();
+  if (!roomId) return { ok: false, error: "MISSING_ROOMID" };
+  if (!hostToken && !playerId) return { ok: false, error: "MISSING_HOST_CREDENTIAL" };
+
+  return withLock_(() => {
+    const ss    = db_();
+    const rooms = ss.getSheetByName(TABS.ROOMS);
+    const idx   = findRoomRow_(rooms, roomId);
+    if (idx < 0) return { ok: false, error: "ROOM_NOT_FOUND" };
+
+    const roomHeaders = rooms.getRange(1, 1, 1, rooms.getLastColumn()).getValues()[0];
+    const rim = idxMap_(roomHeaders);
+    const r   = getRow_(rooms, idx, rooms.getLastColumn());
+
+    if (!canManageRoom_(ss, roomId, hostToken, playerId, r, rim))
+      return { ok: false, error: "HOST_PERMISSION_DENIED" };
+
+    const t = nowMs_();
+    const startingBudget = Number(r[rim.startingBudget] || 100);
+
+    // 重設房間狀態
+    r[rim.state]          = "LOBBY";
+    r[rim.round]          = 0;
+    r[rim.itemId]         = "";
+    r[rim.bidDeadlineTs]  = "";
+    r[rim.revealUntilTs]  = "";
+    r[rim.postUntilTs]    = "";
+    r[rim.updatedAt]      = t;
+    setRow_(rooms, idx, r);
+
+    // 清除本房間所有舊卡牌（避免 restart 多次後 PlayerCards 表膨脹）
+    const cards = ss.getSheetByName(TABS.CARDS);
+    if (cards) {
+      const cAll = readAll_(cards);
+      const cim  = idxMap_(cAll.headers);
+      for (let i = cAll.rows.length - 1; i >= 0; i--) {
+        if (String(cAll.rows[i][cim.roomId]) === roomId) cards.deleteRow(i + 2);
+      }
+    }
+
+    // 重設所有玩家的 budget 和 score，並重新發牌
+    const players = ss.getSheetByName(TABS.PLAYERS);
+    const pAll = readAll_(players);
+    const pim  = idxMap_(pAll.headers);
+    pAll.rows.forEach((pr, i) => {
+      if (String(pr[pim.roomId]) !== roomId) return;
+      const pRowIdx = i + 2;
+      const pRow = getRow_(players, pRowIdx, players.getLastColumn());
+      pRow[pim.budget]    = startingBudget;
+      pRow[pim.score]     = 0;
+      pRow[pim.updatedAt] = t;
+      setRow_(players, pRowIdx, pRow);
+
+      // 重新發牌（舊卡已在上面清除）
+      seedCards_(ss, roomId, String(pr[pim.playerId]));
+    });
+
+    addEvent_(roomId, "GAME_RESTARTED", "", { startingBudget });
+    SpreadsheetApp.flush();
+    return { ok: true };
+  });
+}
+
+/**
  * Host 重置資料庫（清空全部房間 / 玩家 / 事件 / 卡牌，重新 seed items）
  */
 function apiResetDatabase_(p) {
@@ -1023,6 +1307,18 @@ function apiResetDatabase_(p) {
     const row = getRow_(rooms, idx, rooms.getLastColumn());
     if (String(row[im.hostToken]) !== hostToken)
       return { ok: false, error: "HOST_TOKEN_MISMATCH" };
+
+    // 只有名稱為 admin 的房主才能重置資料庫
+    const players = ss.getSheetByName(TABS.PLAYERS);
+    const pAll = readAll_(players);
+    const pim  = idxMap_(pAll.headers);
+    let hostName = "";
+    pAll.rows.forEach(pr => {
+      if (String(pr[pim.roomId]) !== roomId) return;
+      if (String(pr[pim.isHost]) === "1") hostName = String(pr[pim.name] || "");
+    });
+    if (hostName.toLowerCase() !== "admin")
+      return { ok: false, error: "只有名稱為 admin 的房主才能重置資料庫" };
 
     // 清空所有資料（保留 header）
     [TABS.ROOMS, TABS.PLAYERS, TABS.EVENTS, TABS.CARDS].forEach(name => {
@@ -1067,20 +1363,24 @@ function canManageRoom_(ss, roomId, hostToken, playerId, roomRow, rim) {
   return false;
 }
 
-/** 新增一筆事件到 Events 表（自動遞增 eventId） */
+/**
+ * 新增一筆事件到 Events 表（自動遞增 eventId）
+ * 掃描整欄找最大 ID，避免 deleteRows 或多房間造成 ID 衝突
+ */
 function addEvent_(roomId, type, playerId, payloadObj) {
   const ss     = db_();
   const events = ss.getSheetByName(TABS.EVENTS);
   const t      = nowMs_();
 
+  let maxId = 0;
   const lastRow = events.getLastRow();
-  let nextId = 1;
   if (lastRow >= 2) {
-    nextId = Number(events.getRange(lastRow, 2).getValue() || 0) + 1;
+    const col = events.getRange(2, 2, lastRow - 1, 1).getValues();
+    col.forEach(r => { const v = Number(r[0] || 0); if (v > maxId) maxId = v; });
   }
 
   appendRow_(events, [
-    roomId, nextId, t, type, playerId || "", JSON.stringify(payloadObj || {})
+    roomId, maxId + 1, t, type, playerId || "", JSON.stringify(payloadObj || {})
   ]);
 }
 
