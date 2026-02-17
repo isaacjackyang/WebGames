@@ -3,7 +3,9 @@
 
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- 修正：加上 user-scalable=yes + maximum-scale=5 讓手機縮放正常 -->
+  <meta name="viewport"
+    content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=5,user-scalable=yes" />
   <title>Blind Auction Party 🧧</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
@@ -16,8 +18,6 @@
 
     :root {
       --bg1: #8d0010;
-      --bg2: #cf1020;
-      --bg3: #a40016;
       --card: #a40016;
       --card-border: #ffd27d8c;
       --gold: #ffd27d;
@@ -25,18 +25,21 @@
       --gold-bright: #ffcb59;
       --text: #fff2e0;
       --text-dim: #ffe2b8;
-      --danger: #ff3232;
       font-family: 'Noto Sans TC', system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    /* 確保手機觸控縮放正常 */
+    html {
+      touch-action: manipulation
     }
 
     body {
       color: var(--text);
       min-height: 100dvh;
       background: linear-gradient(165deg, #ffb4a2 0%, #cf1020 30%, #8d0010 100%);
-      overflow-x: hidden;
+      overflow-x: hidden
     }
 
-    /* === Header === */
     header {
       padding: 10px 16px;
       border-bottom: 1px solid #ffd27d55;
@@ -46,13 +49,12 @@
       background: #7b0012dd;
       position: sticky;
       top: 0;
-      z-index: 10;
+      z-index: 10
     }
 
     header .title {
       font-weight: 900;
-      font-size: 18px;
-      letter-spacing: .5px
+      font-size: 18px
     }
 
     header .sub {
@@ -60,7 +62,6 @@
       font-size: 11px
     }
 
-    /* === Layout === */
     main {
       padding: 12px;
       max-width: 640px;
@@ -71,14 +72,13 @@
       display: none !important
     }
 
-    /* === Components === */
     .card {
       background: linear-gradient(155deg, #b80018 0%, #8e0012 50%, #73000d 100%);
       border: 1px solid var(--card-border);
       border-radius: 14px;
       padding: 14px;
       box-shadow: 0 6px 20px #3a000866;
-      margin-bottom: 12px;
+      margin-bottom: 12px
     }
 
     .card h3 {
@@ -97,12 +97,7 @@
       font-weight: 700;
       border: 1px solid var(--gold);
       background: #74001099;
-      color: var(--gold-light);
-    }
-
-    .pill.host {
-      background: #c8860099;
-      color: #fff
+      color: var(--gold-light)
     }
 
     .row {
@@ -128,7 +123,7 @@
       padding: 9px 12px;
       font-size: 14px;
       outline: none;
-      width: 100%;
+      width: 100%
     }
 
     input:focus {
@@ -145,7 +140,7 @@
       cursor: pointer;
       font-weight: 900;
       font-size: 14px;
-      transition: transform .1s;
+      transition: transform .1s
     }
 
     button:active {
@@ -183,7 +178,7 @@
       font-size: 12px;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 8px
     }
 
     .status-bar .dot {
@@ -197,10 +192,6 @@
       background: #f66
     }
 
-    .status-bar span {
-      flex: 1
-    }
-
     .error-box {
       color: #ffd0d0;
       font-size: 12px;
@@ -210,10 +201,9 @@
       padding: 8px;
       margin-top: 8px;
       white-space: pre-wrap;
-      word-break: break-all;
+      word-break: break-all
     }
 
-    /* === Tables === */
     table {
       width: 100%;
       border-collapse: collapse
@@ -234,7 +224,6 @@
       text-transform: uppercase
     }
 
-    /* === Countdown === */
     .countdown {
       font-size: 64px;
       font-weight: 900;
@@ -243,14 +232,13 @@
       text-shadow: 0 4px 20px #ff8c0066;
       line-height: 1;
       margin: 8px 0;
-      font-variant-numeric: tabular-nums;
+      font-variant-numeric: tabular-nums
     }
 
     .countdown.small {
       font-size: 32px
     }
 
-    /* === Reveal / Result panel === */
     .result-panel {
       text-align: center;
       padding: 10px 0
@@ -260,7 +248,7 @@
       font-size: 28px;
       font-weight: 900;
       color: var(--gold-bright);
-      text-shadow: 0 2px 12px #ffaa0066;
+      text-shadow: 0 2px 12px #ffaa0066
     }
 
     .result-panel .detail {
@@ -279,7 +267,6 @@
       font-weight: 700
     }
 
-    /* === Leaderboard === */
     .leaderboard .rank {
       display: flex;
       align-items: center;
@@ -288,7 +275,7 @@
       border-radius: 10px;
       margin: 4px 0;
       background: #65000d55;
-      border: 1px solid #ffd27d22;
+      border: 1px solid #ffd27d22
     }
 
     .leaderboard .rank:first-child {
@@ -319,7 +306,6 @@
       color: var(--text-dim)
     }
 
-    /* === Card hand === */
     .card-hand {
       display: flex;
       gap: 8px;
@@ -338,7 +324,7 @@
       box-shadow: 0 3px 8px #5a000a55;
       transition: transform .15s;
       min-width: 80px;
-      text-align: center;
+      text-align: center
     }
 
     .card-item:hover {
@@ -355,7 +341,6 @@
       opacity: .7
     }
 
-    /* === Player list === */
     .player-row {
       display: flex;
       align-items: center;
@@ -363,7 +348,7 @@
       padding: 6px 8px;
       border-radius: 8px;
       margin: 3px 0;
-      background: #65000d44;
+      background: #65000d44
     }
 
     .player-row .p-name {
@@ -377,7 +362,6 @@
       color: var(--text-dim)
     }
 
-    /* === Settings (host) === */
     .settings-grid {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
@@ -390,16 +374,6 @@
       }
     }
 
-    .settings-grid label {
-      margin: 0
-    }
-
-    .settings-grid input {
-      padding: 7px 8px;
-      font-size: 13px
-    }
-
-    /* === Festive decorations (mobile-optimized: fewer elements) === */
     .festive {
       position: fixed;
       inset: 0;
@@ -412,7 +386,7 @@
       position: absolute;
       font-size: 28px;
       opacity: .6;
-      animation: sway var(--d, 3s) ease-in-out infinite;
+      animation: sway var(--d, 3s) ease-in-out infinite
     }
 
     @keyframes sway {
@@ -427,7 +401,6 @@
       }
     }
 
-    /* === Game Over === */
     .game-over {
       text-align: center;
       font-size: 32px;
@@ -436,10 +409,9 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
-      margin: 16px 0 8px;
+      margin: 16px 0 8px
     }
 
-    /* === Peek hint === */
     .peek-hint {
       background: #d4a02033;
       border: 1px solid var(--gold);
@@ -448,10 +420,9 @@
       margin: 6px 0;
       font-size: 13px;
       color: var(--gold-bright);
-      text-align: center;
+      text-align: center
     }
 
-    /* === Bid confirmation === */
     .bid-confirm {
       background: #1a6b2033;
       border: 1px solid #6fff8844;
@@ -459,10 +430,9 @@
       padding: 6px 10px;
       margin: 6px 0;
       font-size: 13px;
-      color: #a8ffb0;
+      color: #a8ffb0
     }
 
-    /* === Debug log === */
     .debug-toggle {
       font-size: 11px;
       color: var(--text-dim);
@@ -488,8 +458,7 @@
 </head>
 
 <body>
-
-  <!-- Festive decorations (reduced for mobile perf) -->
+  <!-- 節慶裝飾（精簡為 4 個，減少手機 GPU 負擔） -->
   <div class="festive" aria-hidden="true">
     <span style="left:5%;top:15%;--d:2.8s">🧧</span>
     <span style="left:85%;top:20%;--d:2.3s">🪙</span>
@@ -508,23 +477,18 @@
   </header>
 
   <main>
-    <!-- Status bar -->
     <div class="status-bar">
-      <div class="dot" id="statusDot"></div>
-      <span id="statusText">初始化中…</span>
+      <div class="dot" id="statusDot"></div><span id="statusText">初始化中…</span>
     </div>
 
-    <!-- ====== LOBBY VIEW ====== -->
+    <!-- ====== 大廳 ====== -->
     <div id="viewLobby">
       <div class="card">
         <h3>🏠 大廳</h3>
-
         <label>房名 / 同場域代碼</label>
         <input id="lobbyCode" placeholder="例：PARTY01" autocomplete="off" />
-
         <label>你的名字</label>
         <input id="playerName" placeholder="例：小明" autocomplete="off" />
-
         <div class="row" style="margin-top:12px">
           <button id="btnCreateRoom">🎉 開新房間</button>
           <button id="btnRefresh" class="secondary">🔄 刷新列表</button>
@@ -533,16 +497,13 @@
           <button id="btnSetup" class="small secondary">初始化DB</button>
           <button id="btnDebug" class="small secondary">測試API</button>
         </div>
-
         <div id="lobbyError" class="error-box hidden"></div>
-
         <label style="margin-top:14px">用 roomId 直接加入</label>
         <div class="row">
-          <input id="joinRoomId" placeholder="例：0123" style="flex:1" autocomplete="off" />
+          <input id="joinRoomId" placeholder="例：1234" style="flex:1" autocomplete="off" />
           <button id="btnJoinRoom" class="secondary">加入</button>
         </div>
       </div>
-
       <div class="card">
         <h3>📋 房間列表</h3>
         <table>
@@ -564,10 +525,9 @@
       </div>
     </div>
 
-    <!-- ====== ROOM VIEW ====== -->
+    <!-- ====== 房間 ====== -->
     <div id="viewRoom" class="hidden">
-
-      <!-- Room header (always visible) -->
+      <!-- 房間資訊列（常駐） -->
       <div class="card" style="padding:10px 14px">
         <div class="row" style="justify-content:space-between">
           <div class="row" style="gap:6px">
@@ -589,40 +549,27 @@
         </div>
       </div>
 
-      <!-- === LOBBY STATE === -->
+      <!-- LOBBY 狀態 -->
       <div id="stateLobby">
         <div class="card">
           <h3>👥 玩家列表</h3>
           <div id="playerListLobby">-</div>
         </div>
-
         <div class="card hidden" id="hostSettingsCard">
           <h3>⚙️ 房主設定</h3>
           <div class="settings-grid">
-            <div>
-              <label>回合數</label>
-              <input id="setMaxRounds" type="number" min="1" max="20" value="8" />
-            </div>
-            <div>
-              <label>每回合秒數</label>
-              <input id="setRoundSeconds" type="number" min="5" max="120" value="25" />
-            </div>
-            <div>
-              <label>起始預算</label>
-              <input id="setStartBudget" type="number" min="10" max="9999" value="100" />
-            </div>
+            <div><label>回合數</label><input id="setMaxRounds" type="number" min="1" max="20" value="8" /></div>
+            <div><label>每回合秒數</label><input id="setRoundSeconds" type="number" min="5" max="120" value="25" /></div>
+            <div><label>起始預算</label><input id="setStartBudget" type="number" min="10" max="9999" value="100" /></div>
           </div>
-          <div class="row" style="margin-top:10px">
-            <button id="btnSaveSettings" class="small secondary">💾 儲存設定</button>
+          <div class="row" style="margin-top:10px"><button id="btnSaveSettings" class="small secondary">💾 儲存設定</button>
           </div>
         </div>
-
-        <div style="text-align:center;margin:12px 0">
-          <button id="btnStartRound" class="hidden" style="font-size:18px;padding:14px 32px">🚀 開始回合</button>
-        </div>
+        <div style="text-align:center;margin:12px 0"><button id="btnStartRound" class="hidden"
+            style="font-size:18px;padding:14px 32px">🚀 開始回合</button></div>
       </div>
 
-      <!-- === BIDDING STATE === -->
+      <!-- BIDDING 狀態 -->
       <div id="stateBidding" class="hidden">
         <div class="card" style="text-align:center">
           <div style="font-size:13px;color:var(--text-dim)">本回合物品</div>
@@ -632,32 +579,24 @@
           <div class="countdown" id="bidCountdown">--</div>
           <div style="font-size:11px;color:var(--text-dim)">剩餘秒數</div>
         </div>
-
         <div class="card">
           <h3>💵 出價</h3>
-          <div class="row">
-            <input id="bidInput" type="number" min="0" step="1" placeholder="輸入金額" style="flex:1" />
-            <button id="btnBid">送出出價</button>
-          </div>
+          <div class="row"><input id="bidInput" type="number" min="0" step="1" placeholder="輸入金額"
+              style="flex:1" /><button id="btnBid">送出出價</button></div>
           <div id="bidConfirmBox" class="bid-confirm hidden"></div>
-
           <div style="margin-top:10px">
             <div style="font-size:12px;color:var(--text-dim);margin-bottom:6px">🃏 手牌</div>
             <div class="card-hand" id="cardHandBidding"></div>
           </div>
-
-          <div style="margin-top:10px">
-            <button id="btnResolve" class="danger small hidden">⚡ 立即結算（Host）</button>
-          </div>
+          <div style="margin-top:10px"><button id="btnResolve" class="danger small hidden">⚡ 立即結算（Host）</button></div>
         </div>
-
         <div class="card">
           <h3>👥 玩家</h3>
           <div id="playerListBidding" style="font-size:12px">-</div>
         </div>
       </div>
 
-      <!-- === REVEAL STATE === -->
+      <!-- REVEAL 狀態 -->
       <div id="stateReveal" class="hidden">
         <div class="card">
           <div class="result-panel">
@@ -677,7 +616,7 @@
         </div>
       </div>
 
-      <!-- === POSTROUND STATE === -->
+      <!-- POSTROUND 狀態 -->
       <div id="statePostround" class="hidden">
         <div class="card">
           <h3>🏆 排行榜</h3>
@@ -690,56 +629,52 @@
         </div>
       </div>
 
-      <!-- === ENDED STATE === -->
+      <!-- ENDED 狀態 -->
       <div id="stateEnded" class="hidden">
         <div class="card">
           <div class="game-over">🎆 遊戲結束 🎆</div>
           <div class="leaderboard" id="leaderboardEndBox">-</div>
-          <div style="text-align:center;margin-top:12px">
-            <button id="btnRestart" class="hidden">🔄 重新開始（Host）</button>
+          <div style="text-align:center;margin-top:12px"><button id="btnRestart" class="hidden">🔄 重新開始（Host）</button>
           </div>
         </div>
       </div>
 
-      <!-- Error + Debug -->
       <div id="roomError" class="error-box hidden"></div>
-      <div>
-        <span class="debug-toggle" id="debugToggle">▶ Debug Log</span>
+      <div><span class="debug-toggle" id="debugToggle">▶ Debug Log</span>
         <div class="log hidden" id="debugLog"></div>
       </div>
     </div>
   </main>
 
   <script>
-    // ===== API URL =====
+    /* ══════════════════════════════════════════════════════════════════════════
+     * API URL 偵測
+     * - 優先用 Apps Script template 注入的 URL
+     * - 其次用 ?api= query param（方便除錯）
+     * - 最後 fallback 到當前 URL（本地測試用）
+     * ════════════════════════════════════════════════════════════════════════ */
     const TEMPLATE_API_BASE = "<?= apiBaseUrl ?>";
+    const API_URL = (function () {
+      const t = String(TEMPLATE_API_BASE || "").trim();
+      if (t && !/<%|<\?/.test(t)) return t; // template 已替換
+      const u = new URL(location.href);
+      const q = (u.searchParams.get("api") || "").trim();
+      if (q) return q;
+      u.hash = ""; u.searchParams.delete("api");
+      const p = u.pathname.endsWith("/dev") ? u.pathname.replace(/\/dev$/, "/exec") : u.pathname;
+      return u.origin + p;
+    })();
 
-    function isTemplatePlaceholder(s) {
-      return /<%=\s*apiBaseUrl\s*%>/i.test(String(s || "")) || /<\?=\s*apiBaseUrl\s*\?>/i.test(String(s || ""));
-    }
-
-    function computeApiUrl() {
-      const byTemplate = String(TEMPLATE_API_BASE || "").trim();
-      if (byTemplate && !isTemplatePlaceholder(byTemplate)) return byTemplate;
-      const u = new URL(window.location.href);
-      const byQuery = (u.searchParams.get("api") || "").trim();
-      if (byQuery) return byQuery;
-      u.hash = "";
-      u.searchParams.delete("api");
-      const path = u.pathname.endsWith("/dev") ? u.pathname.replace(/\/dev$/, "/exec") : u.pathname;
-      return u.origin + path;
-    }
-    const API_URL = computeApiUrl();
-
-    // ===== DOM Cache =====
+    /* ══════════════════════════════════════════════════════════════════════════
+     * DOM 快取（避免重複 getElementById，提升手機效能）
+     * ════════════════════════════════════════════════════════════════════════ */
     const $ = id => document.getElementById(id);
     const DOM = {};
-    ['apiUrlText', 'statusDot', 'statusText',
-      'viewLobby', 'viewRoom', 'lobbyCode', 'playerName',
-      'btnCreateRoom', 'btnRefresh', 'btnSetup', 'btnDebug', 'btnJoinRoom', 'joinRoomId',
+    [
+      'apiUrlText', 'statusDot', 'statusText', 'viewLobby', 'viewRoom',
+      'lobbyCode', 'playerName', 'btnCreateRoom', 'btnRefresh', 'btnSetup', 'btnDebug', 'btnJoinRoom', 'joinRoomId',
       'lobbyError', 'roomsTbody',
-      'roomIdText', 'roomStatePill', 'roomRoundText', 'roomMaxText',
-      'meNameText', 'meBudgetText', 'meScoreText',
+      'roomIdText', 'roomStatePill', 'roomRoundText', 'roomMaxText', 'meNameText', 'meBudgetText', 'meScoreText',
       'btnLeave', 'btnResetDb',
       'stateLobby', 'stateBidding', 'stateReveal', 'statePostround', 'stateEnded',
       'playerListLobby', 'hostSettingsCard', 'setMaxRounds', 'setRoundSeconds', 'setStartBudget',
@@ -751,670 +686,424 @@
       'leaderboardEndBox', 'btnRestart',
       'roomError', 'debugToggle', 'debugLog'
     ].forEach(id => DOM[id] = $(id));
-
     DOM.apiUrlText.textContent = API_URL.length > 60 ? "…" + API_URL.slice(-50) : API_URL;
 
-    // ===== State =====
+    /* ══════════════════════════════════════════════════════════════════════════
+     * 應用狀態
+     * ════════════════════════════════════════════════════════════════════════ */
     const S = {
       roomId: "", playerId: "", hostToken: "", name: "",
-      sinceEventId: 0, syncing: false, stop: false, preferJsonp: false,
-      lastState: "", countdownInterval: null, lastRenderHash: ""
+      sinceEventId: 0,
+      syncing: false,        // single-flight 防止同時多個 sync
+      stop: false,           // 停止輪詢旗標
+      preferJsonp: false,    // 若 fetch 失敗則自動切 JSONP
+      lastState: "",         // 上一次渲染的狀態（用來判斷是否要重開倒數）
+      countdownInterval: null,
+      lastRenderHash: ""     // 用來跳過無變化的重繪
     };
 
-    // ===== Helpers =====
-    function setStatus(ok, msg) {
-      DOM.statusText.textContent = msg;
-      DOM.statusDot.className = ok ? "dot" : "dot bad";
-    }
+    /* ══════════════════════════════════════════════════════════════════════════
+     * 工具函式
+     * ════════════════════════════════════════════════════════════════════════ */
+    function setStatus(ok, msg) { DOM.statusText.textContent = msg; DOM.statusDot.className = ok ? "dot" : "dot bad"; }
 
-    function showErr(elId, msg) {
-      const el = DOM[elId];
-      if (!el) return;
+    function showErr(id, msg) {
+      const el = DOM[id]; if (!el) return;
       if (!msg) { el.classList.add('hidden'); el.textContent = ""; return; }
-      el.classList.remove('hidden');
-      el.textContent = msg;
+      el.classList.remove('hidden'); el.textContent = msg;
     }
 
     function logMsg(msg) {
-      const box = DOM.debugLog;
-      box.textContent = (box.textContent + "\n" + msg).trim();
-      const lines = box.textContent.split("\n");
-      if (lines.length > 150) box.textContent = lines.slice(-150).join("\n");
-      box.scrollTop = box.scrollHeight;
+      const b = DOM.debugLog;
+      b.textContent = (b.textContent + "\n" + msg).trim();
+      const l = b.textContent.split("\n");
+      if (l.length > 150) b.textContent = l.slice(-150).join("\n");
+      b.scrollTop = b.scrollHeight;
     }
 
-    function looksLikeHtml(t) {
-      const s = String(t || "").trim().toLowerCase();
-      return s.startsWith("<!doctype") || s.startsWith("<html") || s.includes("<head") || s.includes("<body");
-    }
+    /** HTML 跳脫（防 XSS） */
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
-    function normalizeLobbyCode(s) {
-      s = String(s || "").trim();
-      if (!s) return "";
-      s = s.replace(/\s+/g, "").replace(/[a-z]/g, c => c.toUpperCase());
-      return s.length >= 2 ? s.slice(0, 16) : "";
-    }
+    function looksLikeHtml(t) { const s = String(t || "").trim().toLowerCase(); return s.startsWith("<!doctype") || s.startsWith("<html") || s.includes("<head") || s.includes("<body"); }
 
-    function must(s, name) {
-      s = String(s || "").trim();
-      if (!s) throw new Error("請填入：" + name);
-      return s;
-    }
+    /** 正規化 lobbyCode（前後端邏輯一致） */
+    function normLC(s) { s = String(s || "").trim(); if (!s) return ""; s = s.replace(/\s+/g, "").replace(/[a-z]/g, c => c.toUpperCase()); return s.length >= 2 ? s.slice(0, 16) : ""; }
 
-    // ===== JSONP =====
-    function randomCbName() { return "__BAP_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8); }
+    function must(s, name) { s = String(s || "").trim(); if (!s) throw new Error("請填入：" + name); return s; }
+
+    /* ══════════════════════════════════════════════════════════════════════════
+     * 網路層（fetch + JSONP fallback）
+     * ════════════════════════════════════════════════════════════════════════ */
+    function jsonpCb() { return "__BAP_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8); }
 
     function apiGETJsonp(action, params = {}) {
-      return new Promise((resolve, reject) => {
-        const u = new URL(API_URL);
-        const cb = randomCbName();
-        u.searchParams.set("action", action);
-        u.searchParams.set("callback", cb);
-        for (const [k, v] of Object.entries(params)) {
-          if (v === undefined || v === null || v === "") continue;
-          u.searchParams.set(k, String(v));
-        }
-        const script = document.createElement("script");
-        let done = false;
-        const timeout = setTimeout(() => finish(new Error("JSONP timeout")), 15000);
-        function cleanup() {
-          clearTimeout(timeout);
-          if (script.parentNode) script.parentNode.removeChild(script);
-          try { delete window[cb]; } catch (_) { window[cb] = undefined; }
-        }
-        function finish(err, data) {
-          if (done) return; done = true; cleanup();
-          if (err) reject(err); else resolve(data);
-        }
-        window[cb] = data => finish(null, data);
-        script.onerror = () => finish(new Error("JSONP load failed"));
-        script.src = u.toString();
-        document.head.appendChild(script);
+      return new Promise((res, rej) => {
+        const u = new URL(API_URL); const cb = jsonpCb();
+        u.searchParams.set("action", action); u.searchParams.set("callback", cb);
+        for (const [k, v] of Object.entries(params)) { if (v == null || v === "") continue; u.searchParams.set(k, String(v)); }
+        const sc = document.createElement("script"); let done = false;
+        const to = setTimeout(() => fin(new Error("JSONP timeout")), 15000);
+        function fin(e, d) { if (done) return; done = true; clearTimeout(to); if (sc.parentNode) sc.remove(); try { delete window[cb]; } catch (_) { } e ? rej(e) : res(d); }
+        window[cb] = d => fin(null, d); sc.onerror = () => fin(new Error("JSONP failed")); sc.src = u.toString(); document.head.appendChild(sc);
       });
     }
 
-    function isNetworkErr(err) {
-      const m = String(err && err.message ? err.message : err || "").toLowerCase();
-      return m.includes("networkerror") || m.includes("failed to fetch") || m.includes("load failed") || m.includes("fetch");
-    }
+    function isNetErr(e) { const m = String(e && e.message || e || "").toLowerCase(); return m.includes("network") || m.includes("failed to fetch") || m.includes("load failed"); }
 
     async function apiGET(action, params = {}) {
       if (S.preferJsonp) return apiGETJsonp(action, params);
-      const u = new URL(API_URL);
-      u.searchParams.set("action", action);
-      for (const [k, v] of Object.entries(params)) {
-        if (v === undefined || v === null || v === "") continue;
-        u.searchParams.set(k, String(v));
-      }
+      const u = new URL(API_URL); u.searchParams.set("action", action);
+      for (const [k, v] of Object.entries(params)) { if (v == null || v === "") continue; u.searchParams.set(k, String(v)); }
       try {
-        const res = await fetch(u.toString(), { method: "GET", credentials: "include" });
-        const text = await res.text();
-        if (looksLikeHtml(text)) throw new Error("API returned HTML");
-        try { return JSON.parse(text); }
-        catch (_) { throw new Error("Non-JSON: " + text.slice(0, 200)); }
-      } catch (err) {
-        logMsg("GET→JSONP " + action + " reason=" + String(err.message || err));
-        if (isNetworkErr(err)) S.preferJsonp = true;
+        const r = await fetch(u.toString(), { method: "GET", credentials: "include" });
+        const t = await r.text();
+        if (looksLikeHtml(t)) throw new Error("API returned HTML");
+        return JSON.parse(t);
+      } catch (e) {
+        logMsg("GET→JSONP " + action); if (isNetErr(e)) S.preferJsonp = true;
         return apiGETJsonp(action, params);
       }
     }
 
     async function apiPOST(action, payload = {}) {
       try {
-        const res = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ action, ...payload })
-        });
-        const text = await res.text();
-        if (looksLikeHtml(text)) {
-          logMsg("POST→GET " + action);
-          return apiGET(action, payload);
-        }
-        try { return JSON.parse(text); }
-        catch (_) { throw new Error("Non-JSON: " + text.slice(0, 200)); }
-      } catch (err) {
-        logMsg("POST→GET " + action + " reason=" + String(err.message || err));
-        return apiGET(action, payload);
-      }
+        const r = await fetch(API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ action, ...payload }) });
+        const t = await r.text();
+        if (looksLikeHtml(t)) { logMsg("POST→GET " + action); return apiGET(action, payload); }
+        return JSON.parse(t);
+      } catch (e) { logMsg("POST→GET " + action); return apiGET(action, payload); }
     }
 
-    // ===== View switching =====
-    function showLobby() {
-      DOM.viewLobby.classList.remove('hidden');
-      DOM.viewRoom.classList.add('hidden');
-      stopSync();
-    }
+    /* ══════════════════════════════════════════════════════════════════════════
+     * 畫面切換
+     * ════════════════════════════════════════════════════════════════════════ */
+    function showLobby() { DOM.viewLobby.classList.remove('hidden'); DOM.viewRoom.classList.add('hidden'); stopSync(); }
+    function showRoom() { DOM.viewLobby.classList.add('hidden'); DOM.viewRoom.classList.remove('hidden'); }
 
-    function showRoom() {
-      DOM.viewLobby.classList.add('hidden');
-      DOM.viewRoom.classList.remove('hidden');
-    }
-
+    /** 根據房間 state 顯示對應面板 */
     function showRoomState(state) {
-      ['stateLobby', 'stateBidding', 'stateReveal', 'statePostround', 'stateEnded'].forEach(id => {
-        DOM[id].classList.add('hidden');
-      });
-      const map = {
-        LOBBY: 'stateLobby', BIDDING: 'stateBidding',
-        REVEAL: 'stateReveal', POSTROUND: 'statePostround',
-        ENDED: 'stateEnded'
-      };
-      const target = map[state] || 'stateLobby';
-      DOM[target].classList.remove('hidden');
-
-      // Clear countdown when changing state
-      if (state !== S.lastState) {
-        clearCountdown();
-        S.lastState = state;
-      }
+      ['stateLobby', 'stateBidding', 'stateReveal', 'statePostround', 'stateEnded'].forEach(id => DOM[id].classList.add('hidden'));
+      const map = { LOBBY: 'stateLobby', BIDDING: 'stateBidding', REVEAL: 'stateReveal', POSTROUND: 'statePostround', ENDED: 'stateEnded' };
+      DOM[map[state] || 'stateLobby'].classList.remove('hidden');
+      if (state !== S.lastState) { clearCountdown(); S.lastState = state; }
     }
 
-    // ===== Lobby =====
+    /* ══════════════════════════════════════════════════════════════════════════
+     * 大廳操作
+     * ════════════════════════════════════════════════════════════════════════ */
+    const stateLabel = { LOBBY: '🟢 等待中', BIDDING: '🔴 出價中', REVEAL: '🟡 揭露中', POSTROUND: '📊 排行', ENDED: '🏁 結束' };
+
     function renderRooms(rooms) {
-      const tb = DOM.roomsTbody;
-      tb.innerHTML = "";
-      if (!rooms.length) {
-        tb.innerHTML = '<tr><td colspan="5" style="font-size:12px;color:var(--text-dim)">沒有活躍房間</td></tr>';
-        return;
-      }
-      for (const r of rooms) {
-        const stateMap = { LOBBY: '🟢 等待中', BIDDING: '🔴 出價中', REVEAL: '🟡 揭露中', POSTROUND: '📊 排行', ENDED: '🏁 結束' };
+      const tb = DOM.roomsTbody; tb.innerHTML = "";
+      if (!rooms.length) { tb.innerHTML = '<tr><td colspan="5" style="font-size:12px;color:var(--text-dim)">沒有活躍房間</td></tr>'; return; }
+      rooms.forEach(r => {
         const tr = document.createElement("tr");
-        tr.innerHTML = `
-      <td style="font-family:monospace;font-weight:700">${r.roomId}</td>
-      <td style="font-size:12px">${stateMap[r.state] || r.state}</td>
-      <td>${r.playerCount || 0}</td>
-      <td>${r.round || 0}/${r.maxRounds || 0}</td>
-      <td><button class="small secondary">加入</button></td>
-    `;
+        tr.innerHTML = `<td style="font-family:monospace;font-weight:700">${r.roomId}</td><td style="font-size:12px">${stateLabel[r.state] || r.state}</td><td>${r.playerCount || 0}</td><td>${r.round || 0}/${r.maxRounds || 0}</td><td><button class="small secondary">加入</button></td>`;
         tr.querySelector("button").onclick = () => joinRoomById(r.roomId);
         tb.appendChild(tr);
-      }
+      });
     }
 
-    let lobbyLoading = false;
-    function setLobbyLoading(v) {
-      lobbyLoading = !!v;
-      DOM.btnRefresh.disabled = lobbyLoading;
-      DOM.btnCreateRoom.disabled = lobbyLoading;
-      DOM.btnJoinRoom.disabled = lobbyLoading;
-    }
+    let lobbyBusy = false;
+    function setLobbyBusy(v) { lobbyBusy = !!v; DOM.btnRefresh.disabled = lobbyBusy; DOM.btnCreateRoom.disabled = lobbyBusy; DOM.btnJoinRoom.disabled = lobbyBusy; }
 
+    /** 刷新房間列表 */
     async function refreshLobby() {
       showErr('lobbyError', '');
-      if (lobbyLoading) return;
-      const lc = normalizeLobbyCode(DOM.lobbyCode.value);
+      if (lobbyBusy) return;
+      const lc = normLC(DOM.lobbyCode.value);
       if (!lc) { showErr('lobbyError', '房名至少 2 個字'); setStatus(false, '請先填房名'); return; }
-      setLobbyLoading(true);
+      setLobbyBusy(true);
       try {
         setStatus(true, '載入房間列表…');
         const out = await apiGET("listLobbyRooms", { lobbyCode: lc });
         if (!out.ok) throw new Error(out.error || "listLobbyRooms failed");
         renderRooms(out.rooms || []);
-        setStatus(true, '大廳就緒');
-      } finally { setLobbyLoading(false); }
+        setStatus(true, '大廳就緒（' + (out.rooms || []).length + ' 間房）');
+      } catch (err) {
+        showErr('lobbyError', String(err.message || err));
+        setStatus(false, '刷新失敗');
+        logMsg("REFRESH_ERR: " + String(err.message || err));
+      } finally { setLobbyBusy(false); }
     }
 
+    /** 建立新房間 + 自動加入 */
     async function createRoom() {
       showErr('lobbyError', '');
-      const lc = normalizeLobbyCode(must(DOM.lobbyCode.value, '房名'));
+      const lc = normLC(must(DOM.lobbyCode.value, '房名'));
       if (!lc) throw new Error("房名至少 2 個字");
       const name = must(DOM.playerName.value, '你的名字').slice(0, 18);
-
       setStatus(true, '建立房間…');
       const cr = await apiPOST("createRoom", { lobbyCode: lc });
       if (!cr.ok) throw new Error(cr.error || "createRoom failed");
-
       const jr = await apiPOST("joinRoom", { roomId: cr.roomId, name });
       if (!jr.ok) throw new Error(jr.error || "joinRoom failed");
-
-      S.roomId = cr.roomId;
-      S.hostToken = cr.hostToken || "";
-      S.playerId = jr.playerId || "";
-      S.name = name;
-      S.sinceEventId = 0;
+      S.roomId = cr.roomId; S.hostToken = cr.hostToken || ""; S.playerId = jr.playerId || ""; S.name = name; S.sinceEventId = 0;
       enterRoom();
     }
 
+    /** 以 roomId 加入房間 */
     async function joinRoomById(roomId) {
       showErr('lobbyError', '');
       const name = must(DOM.playerName.value, '你的名字').slice(0, 18);
       roomId = must(roomId, 'roomId').trim();
-
       setStatus(true, '加入房間…');
       const jr = await apiPOST("joinRoom", { roomId, name });
       if (!jr.ok) throw new Error(jr.error || "joinRoom failed");
-
-      S.roomId = roomId;
-      S.hostToken = "";
-      S.playerId = jr.playerId || "";
-      S.name = name;
-      S.sinceEventId = 0;
+      S.roomId = roomId; S.hostToken = ""; S.playerId = jr.playerId || ""; S.name = name; S.sinceEventId = 0;
       enterRoom();
     }
 
     function enterRoom() {
       showRoom();
-      DOM.roomIdText.textContent = S.roomId;
-      DOM.meNameText.textContent = S.name;
-      DOM.debugLog.textContent = "";
-      showErr('roomError', '');
+      DOM.roomIdText.textContent = S.roomId; DOM.meNameText.textContent = S.name;
+      DOM.debugLog.textContent = ""; showErr('roomError', '');
       startSync();
     }
 
-    // ===== Countdown =====
-    function clearCountdown() {
-      if (S.countdownInterval) { clearInterval(S.countdownInterval); S.countdownInterval = null; }
-    }
+    /* ══════════════════════════════════════════════════════════════════════════
+     * 倒數計時器
+     * ════════════════════════════════════════════════════════════════════════ */
+    function clearCountdown() { if (S.countdownInterval) { clearInterval(S.countdownInterval); S.countdownInterval = null; } }
 
-    function startCountdown(elId, deadlineMs, onZero) {
+    function startCountdown(elId, deadlineMs) {
       clearCountdown();
       const el = DOM[elId];
       function tick() {
-        const remaining = Math.max(0, Math.ceil((deadlineMs - Date.now()) / 1000));
-        el.textContent = remaining;
-        if (remaining <= 0) {
-          clearCountdown();
-          if (onZero) onZero();
-        }
+        const rem = Math.max(0, Math.ceil((deadlineMs - Date.now()) / 1000));
+        el.textContent = rem;
       }
       tick();
       S.countdownInterval = setInterval(tick, 500);
     }
 
-    // ===== Render players =====
-    function renderPlayerList(containerId, players) {
-      const el = DOM[containerId];
-      if (!el) return;
+    /* ══════════════════════════════════════════════════════════════════════════
+     * 渲染輔助
+     * ════════════════════════════════════════════════════════════════════════ */
+    function renderPlayerList(id, players) {
+      const el = DOM[id]; if (!el) return;
       if (!players || !players.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text-dim)">尚無玩家</div>'; return; }
-
-      el.innerHTML = players.map(p => `
-    <div class="player-row">
-      <span class="p-name">${p.isHost ? '👑 ' : ''}${escHtml(p.name)}${p.playerId === S.playerId ? ' (你)' : ''}</span>
-      <span class="p-stat">💰 ${p.budget}</span>
-      <span class="p-stat">⭐ ${p.score}</span>
-    </div>
-  `).join('');
+      el.innerHTML = players.map(p => `<div class="player-row"><span class="p-name">${p.isHost ? '👑 ' : ''}${esc(p.name)}${p.playerId === S.playerId ? ' (你)' : ''}</span><span class="p-stat">💰 ${p.budget}</span><span class="p-stat">⭐ ${p.score}</span></div>`).join('');
     }
 
-    function renderLeaderboard(containerId, players) {
-      const el = DOM[containerId];
-      if (!el) return;
+    function renderLeaderboard(id, players) {
+      const el = DOM[id]; if (!el) return;
       const sorted = [...players].sort((a, b) => b.score - a.score);
       const medals = ['🥇', '🥈', '🥉'];
-      el.innerHTML = sorted.map((p, i) => `
-    <div class="rank">
-      <span class="rank-num">${medals[i] || (i + 1)}</span>
-      <span class="rank-name">${p.isHost ? '👑 ' : ''}${escHtml(p.name)}${p.playerId === S.playerId ? ' (你)' : ''}</span>
-      <span>
-        <span class="rank-score">⭐ ${p.score}</span>
-        <span class="rank-budget">💰 ${p.budget}</span>
-      </span>
-    </div>
-  `).join('');
+      el.innerHTML = sorted.map((p, i) => `<div class="rank"><span class="rank-num">${medals[i] || (i + 1)}</span><span class="rank-name">${p.isHost ? '👑 ' : ''}${esc(p.name)}${p.playerId === S.playerId ? ' (你)' : ''}</span><span><span class="rank-score">⭐ ${p.score}</span> <span class="rank-budget">💰 ${p.budget}</span></span></div>`).join('');
     }
 
-    function renderCardHand(containerId, cards, roundNum, roomState) {
-      const el = DOM[containerId];
-      if (!el) return;
+    function renderCardHand(id, cards, round, state) {
+      const el = DOM[id]; if (!el) return;
       if (!cards || !cards.length) { el.innerHTML = '<span style="font-size:12px;color:var(--text-dim)">無手牌</span>'; return; }
-
       el.innerHTML = cards.map(c => {
-        const canUse = c.count > 0 && roomState === 'BIDDING';
-        return `
-      <div class="card-item${canUse ? '' : ' used'}" data-card="${c.cardId}" data-round="${roundNum}" ${canUse ? '' : 'style="pointer-events:none"'}>
-        <div>${escHtml(c.name)}</div>
-        <div class="card-count">x${c.count}</div>
-      </div>
-    `;
+        const ok = c.count > 0 && state === 'BIDDING';
+        return `<div class="card-item${ok ? '' : ' used'}" data-card="${c.cardId}" data-round="${round}"${ok ? '' : ' style="pointer-events:none"'}><div>${esc(c.name)}</div><div class="card-count">x${c.count}</div></div>`;
       }).join('');
-
       el.querySelectorAll('.card-item:not(.used)').forEach(el => {
         el.onclick = async () => {
-          const cardId = el.dataset.card;
-          const round = Number(el.dataset.round);
-          try {
-            el.classList.add('used');
-            const out = await apiPOST("playCard", { roomId: S.roomId, playerId: S.playerId, round, cardId });
-            if (!out.ok) throw new Error(out.error || "playCard failed");
-            logMsg("CARD_PLAYED: " + cardId);
-          } catch (err) {
-            showErr('roomError', String(err.message || err));
-            logMsg("CARD_ERR: " + String(err.message || err));
-          }
+          const cardId = el.dataset.card, rd = Number(el.dataset.round);
+          try { el.classList.add('used'); const o = await apiPOST("playCard", { roomId: S.roomId, playerId: S.playerId, round: rd, cardId }); if (!o.ok) throw new Error(o.error); }
+          catch (e) { showErr('roomError', String(e.message || e)); }
         };
       });
     }
 
-    function escHtml(s) {
-      const d = document.createElement('div');
-      d.textContent = s;
-      return d.innerHTML;
-    }
-
-    // ===== Sync =====
+    /* ══════════════════════════════════════════════════════════════════════════
+     * 同步輪詢（每 2 秒）
+     * ════════════════════════════════════════════════════════════════════════ */
     function stopSync() { S.stop = true; clearCountdown(); }
 
     function startSync() {
       S.stop = false;
       (async function loop() {
         while (!S.stop) {
-          try { await syncOnce(); }
-          catch (err) {
-            showErr('roomError', String(err.message || err));
-            setStatus(false, '同步失敗');
-            logMsg("SYNC_ERR: " + String(err.message || err));
-            await new Promise(r => setTimeout(r, 3000));
-          }
+          try { await syncOnce(); } catch (e) { showErr('roomError', String(e.message || e)); setStatus(false, '同步失敗'); logMsg("SYNC_ERR: " + String(e.message || e)); await new Promise(r => setTimeout(r, 3000)); }
           await new Promise(r => setTimeout(r, 2000));
         }
       })();
     }
 
+    /** 單次同步：呼叫後端 sync API，更新 UI */
     async function syncOnce() {
-      if (S.syncing) return;
-      S.syncing = true;
+      if (S.syncing) return; S.syncing = true;
       try {
-        const out = await apiGET("sync", {
-          roomId: S.roomId, sinceEventId: S.sinceEventId,
-          playerId: S.playerId, hostToken: S.hostToken
-        });
+        const out = await apiGET("sync", { roomId: S.roomId, sinceEventId: S.sinceEventId, playerId: S.playerId, hostToken: S.hostToken });
         if (!out.ok) throw new Error(out.error || "sync failed");
+        const room = out.room, players = out.players || [], myCards = out.myCards || [], rr = out.resolveResult, peek = out.peekHint, myBid = out.myBid;
 
-        const room = out.room;
-        const players = out.players || [];
-        const events = out.events || [];
-        const myCards = out.myCards || [];
-        const resolveResult = out.resolveResult;
-        const peekHint = out.peekHint;
-        const myBid = out.myBid;
-
-        // Compute render hash to skip unnecessary DOM updates
-        const hash = JSON.stringify({
-          s: room.state, r: room.round, pc: players.length,
-          bd: room.bidDeadlineTs, rv: room.revealUntilTs, pt: room.postUntilTs,
-          rr: resolveResult ? resolveResult.winnerId : '', mb: myBid,
-          pl: players.map(p => p.playerId + p.budget + p.score).join(',')
-        });
-
+        // 跳過無變化的重繪（用 hash 比對）
+        const hash = JSON.stringify({ s: room.state, r: room.round, bd: room.bidDeadlineTs, rv: room.revealUntilTs, pt: room.postUntilTs, win: rr ? rr.winnerId : '', mb: myBid, pl: players.map(p => p.playerId + p.budget + p.score).join(',') });
+        const evts = out.events || [];
         if (hash === S.lastRenderHash) {
-          // Still update events
-          if (events.length) {
-            const maxId = Math.max(...events.map(e => Number(e.eventId || 0)));
-            if (Number.isFinite(maxId) && maxId > S.sinceEventId) S.sinceEventId = maxId;
-          }
+          if (evts.length) { const mx = Math.max(...evts.map(e => e.eventId || 0)); if (mx > S.sinceEventId) S.sinceEventId = mx; }
           return;
         }
         S.lastRenderHash = hash;
 
-        // Update room header
-        const stateLabels = { LOBBY: '🟢 等待中', BIDDING: '🔴 出價中', REVEAL: '🟡 揭露結果', POSTROUND: '📊 排行榜', ENDED: '🏁 結束' };
-        DOM.roomStatePill.textContent = stateLabels[room.state] || room.state;
+        // ── 房間 header ──
+        DOM.roomStatePill.textContent = stateLabel[room.state] || room.state;
         DOM.roomRoundText.textContent = String(room.round || 0);
         DOM.roomMaxText.textContent = String(room.maxRounds || 0);
-
         const me = players.find(p => p.playerId === S.playerId);
         DOM.meBudgetText.textContent = me ? String(me.budget) : "-";
         DOM.meScoreText.textContent = me ? String(me.score) : "-";
-
         const amHost = !!(S.hostToken || (me && me.isHost));
-
-        // Show/hide host-only elements
         DOM.btnResetDb.classList.toggle('hidden', !S.hostToken);
 
-        // Switch state panels
+        // ── 切換面板 ──
         showRoomState(room.state);
 
-        // === LOBBY ===
+        // ── LOBBY ──
         if (room.state === "LOBBY") {
           renderPlayerList('playerListLobby', players);
           DOM.btnStartRound.classList.toggle('hidden', !amHost);
           DOM.hostSettingsCard.classList.toggle('hidden', !amHost);
           if (amHost) {
-            // Only update if not focused
-            if (document.activeElement !== DOM.setMaxRounds)
-              DOM.setMaxRounds.value = room.maxRounds;
-            if (document.activeElement !== DOM.setRoundSeconds)
-              DOM.setRoundSeconds.value = room.roundSeconds;
-            if (document.activeElement !== DOM.setStartBudget)
-              DOM.setStartBudget.value = room.startingBudget;
+            if (document.activeElement !== DOM.setMaxRounds) DOM.setMaxRounds.value = room.maxRounds;
+            if (document.activeElement !== DOM.setRoundSeconds) DOM.setRoundSeconds.value = room.roundSeconds;
+            if (document.activeElement !== DOM.setStartBudget) DOM.setStartBudget.value = room.startingBudget;
           }
         }
 
-        // === BIDDING ===
+        // ── BIDDING ──
         if (room.state === "BIDDING") {
-          if (room.item) {
-            DOM.bidItemName.textContent = room.item.name || "-";
-            DOM.bidItemHint.textContent = room.item.publicHint || "";
-          }
-          // Peek hint
-          if (peekHint) {
-            DOM.peekHintBox.classList.remove('hidden');
-            DOM.peekHintBox.textContent = `🔮 偷看提示：真實價值在 ${peekHint.min} ~ ${peekHint.max} 之間`;
-          } else {
-            DOM.peekHintBox.classList.add('hidden');
-          }
-          // Countdown
-          if (room.bidDeadlineTs > 0 && !S.countdownInterval) {
-            startCountdown('bidCountdown', room.bidDeadlineTs);
-          }
-          // My bid
-          if (myBid !== null && myBid !== undefined) {
-            DOM.bidConfirmBox.classList.remove('hidden');
-            DOM.bidConfirmBox.textContent = `✅ 你已出價：${myBid}`;
-          } else {
-            DOM.bidConfirmBox.classList.add('hidden');
-          }
-          // Cards
+          if (room.item) { DOM.bidItemName.textContent = room.item.name || "-"; DOM.bidItemHint.textContent = room.item.publicHint || ""; }
+          if (peek) { DOM.peekHintBox.classList.remove('hidden'); DOM.peekHintBox.textContent = `🔮 偷看提示：真實價值在 ${peek.min} ~ ${peek.max} 之間`; } else { DOM.peekHintBox.classList.add('hidden'); }
+          if (room.bidDeadlineTs > 0 && !S.countdownInterval) startCountdown('bidCountdown', room.bidDeadlineTs);
+          if (myBid != null) { DOM.bidConfirmBox.classList.remove('hidden'); DOM.bidConfirmBox.textContent = `✅ 你已出價：${myBid}`; } else { DOM.bidConfirmBox.classList.add('hidden'); }
           renderCardHand('cardHandBidding', myCards, room.round, room.state);
-          // Host resolve button
           DOM.btnResolve.classList.toggle('hidden', !amHost);
-          // Player list
           renderPlayerList('playerListBidding', players);
         }
 
-        // === REVEAL ===
-        if (room.state === "REVEAL") {
-          if (resolveResult) {
-            DOM.revealItemName.textContent = resolveResult.itemName || "-";
-            DOM.revealHiddenValue.textContent = String(resolveResult.hiddenValue || "?");
-            if (resolveResult.winnerId) {
-              DOM.revealWinner.textContent = resolveResult.winnerName || resolveResult.winnerId;
-              let detail = `出價 ${resolveResult.winnerBid}`;
-              if (resolveResult.taxApplied) detail += `（加稅後實付 ${resolveResult.actualCost}）`;
-              const delta = resolveResult.deltas && resolveResult.deltas[resolveResult.winnerId];
-              if (delta) {
-                const d = delta.delta;
-                const cls = d >= 0 ? 'delta-positive' : 'delta-negative';
-                detail += ` → 分數 <span class="${cls}">${d >= 0 ? '+' : ''}${d}</span>`;
-                if (delta.shieldApplied) detail += ' 🛡️護盾生效！';
-              }
-              DOM.revealDetail.innerHTML = detail;
-            } else {
-              DOM.revealWinner.textContent = "無人得標";
-              DOM.revealDetail.textContent = "所有人出價超過預算或無人出價";
-            }
-
-            // Show all player deltas
-            let deltasHtml = '';
-            players.forEach(p => {
-              const d = resolveResult.deltas && resolveResult.deltas[p.playerId];
-              if (d) {
-                const cls = d.delta >= 0 ? 'delta-positive' : 'delta-negative';
-                deltasHtml += `<div>${escHtml(p.name)}: <span class="${cls}">${d.delta >= 0 ? '+' : ''}${d.delta}</span></div>`;
-              }
-            });
-            DOM.revealDeltas.innerHTML = deltasHtml;
-          }
-          // Countdown
-          if (room.revealUntilTs > 0 && !S.countdownInterval) {
-            startCountdown('revealCountdown', room.revealUntilTs);
-          }
+        // ── REVEAL ──
+        if (room.state === "REVEAL" && rr) {
+          DOM.revealItemName.textContent = rr.itemName || "-";
+          DOM.revealHiddenValue.textContent = String(rr.hiddenValue || "?");
+          if (rr.winnerId) {
+            DOM.revealWinner.textContent = rr.winnerName || rr.winnerId;
+            let det = `出價 ${rr.winnerBid}`;
+            if (rr.taxApplied) det += `（加稅後實付 ${rr.actualCost}）`;
+            const d = rr.deltas && rr.deltas[rr.winnerId];
+            if (d) { const cls = d.delta >= 0 ? 'delta-positive' : 'delta-negative'; det += ` → 分數 <span class="${cls}">${d.delta >= 0 ? '+' : ''}${d.delta}</span>`; if (d.shieldApplied) det += ' 🛡️護盾生效！'; }
+            DOM.revealDetail.innerHTML = det;
+          } else { DOM.revealWinner.textContent = "無人得標"; DOM.revealDetail.textContent = "所有人出價超過預算或無人出價"; }
+          let dh = ''; players.forEach(p => { const d = rr.deltas && rr.deltas[p.playerId]; if (d) { const c = d.delta >= 0 ? 'delta-positive' : 'delta-negative'; dh += `<div>${esc(p.name)}: <span class="${c}">${d.delta >= 0 ? '+' : ''}${d.delta}</span></div>`; } });
+          DOM.revealDeltas.innerHTML = dh;
+          if (room.revealUntilTs > 0 && !S.countdownInterval) startCountdown('revealCountdown', room.revealUntilTs);
         }
 
-        // === POSTROUND ===
+        // ── POSTROUND ──
         if (room.state === "POSTROUND") {
           renderLeaderboard('leaderboardBox', players);
           DOM.btnNextRound.classList.toggle('hidden', !amHost);
-          if (amHost) {
-            DOM.postAutoText.textContent = "Host 可手動開始下一回合";
-          }
-          if (room.postUntilTs > 0 && !S.countdownInterval) {
-            startCountdown('postCountdown', room.postUntilTs);
-          }
+          DOM.postAutoText.textContent = amHost ? "Host 可手動開始下一回合" : "自動進入下一回合…";
+          if (room.postUntilTs > 0 && !S.countdownInterval) startCountdown('postCountdown', room.postUntilTs);
         }
 
-        // === ENDED ===
-        if (room.state === "ENDED") {
-          renderLeaderboard('leaderboardEndBox', players);
-          DOM.btnRestart.classList.toggle('hidden', !amHost);
-        }
+        // ── ENDED ──
+        if (room.state === "ENDED") { renderLeaderboard('leaderboardEndBox', players); DOM.btnRestart.classList.toggle('hidden', !amHost); }
 
-        // events
-        if (events.length) {
-          const maxId = Math.max(...events.map(e => Number(e.eventId || 0)));
-          if (Number.isFinite(maxId) && maxId > S.sinceEventId) S.sinceEventId = maxId;
-          events.forEach(ev => logMsg(`#${ev.eventId} ${ev.type} ${ev.playerId || ""} ${ev.payloadJson || ""}`));
+        // ── 事件增量 ──
+        if (evts.length) {
+          const mx = Math.max(...evts.map(e => e.eventId || 0));
+          if (mx > S.sinceEventId) S.sinceEventId = mx;
+          evts.forEach(ev => logMsg(`#${ev.eventId} ${ev.type} ${ev.playerId || ""} ${ev.payloadJson || ""}`));
         }
-
-        setStatus(true, "同步中… " + (stateLabels[room.state] || room.state));
-      } finally {
-        S.syncing = false;
-      }
+        setStatus(true, "同步中… " + (stateLabel[room.state] || room.state));
+      } finally { S.syncing = false; }
     }
 
-    // ===== Actions =====
+    /* ══════════════════════════════════════════════════════════════════════════
+     * 遊戲操作
+     * ════════════════════════════════════════════════════════════════════════ */
     async function sendBid() {
       showErr('roomError', '');
       const bid = Number(DOM.bidInput.value);
       if (!Number.isFinite(bid) || bid < 0) throw new Error("出價必須 ≥ 0");
       const round = Number(DOM.roomRoundText.textContent || 0);
-      const out = await apiPOST("bid", { roomId: S.roomId, playerId: S.playerId, round, bid });
-      if (!out.ok) throw new Error(out.error || "bid failed");
-      DOM.bidConfirmBox.classList.remove('hidden');
-      DOM.bidConfirmBox.textContent = `✅ 你已出價：${bid}`;
-      S.lastRenderHash = ""; // force re-render
+      const o = await apiPOST("bid", { roomId: S.roomId, playerId: S.playerId, round, bid });
+      if (!o.ok) throw new Error(o.error || "bid failed");
+      DOM.bidConfirmBox.classList.remove('hidden'); DOM.bidConfirmBox.textContent = `✅ 你已出價：${bid}`;
+      S.lastRenderHash = "";
     }
 
     async function startRoundHost() {
       showErr('roomError', '');
-      const out = await apiPOST("startRound", { roomId: S.roomId, hostToken: S.hostToken, playerId: S.playerId });
-      if (!out.ok) throw new Error(out.error || "startRound failed");
+      const o = await apiPOST("startRound", { roomId: S.roomId, hostToken: S.hostToken, playerId: S.playerId });
+      if (!o.ok) throw new Error(o.error || "startRound failed");
       S.lastRenderHash = "";
     }
 
     async function resolveHost() {
       showErr('roomError', '');
-      const out = await apiPOST("resolve", { roomId: S.roomId, hostToken: S.hostToken, playerId: S.playerId });
-      if (!out.ok) throw new Error(out.error || "resolve failed");
-      S.lastRenderHash = "";
-    }
-
-    async function nextRoundHost() {
-      showErr('roomError', '');
-      const out = await apiPOST("startRound", { roomId: S.roomId, hostToken: S.hostToken, playerId: S.playerId });
-      if (!out.ok) throw new Error(out.error || "startRound failed");
+      const o = await apiPOST("resolve", { roomId: S.roomId, hostToken: S.hostToken, playerId: S.playerId });
+      if (!o.ok) throw new Error(o.error || "resolve failed");
       S.lastRenderHash = "";
     }
 
     async function saveSettings() {
       showErr('roomError', '');
-      const out = await apiPOST("updateSettings", {
-        roomId: S.roomId, hostToken: S.hostToken, playerId: S.playerId,
-        maxRounds: Number(DOM.setMaxRounds.value || 8),
-        roundSeconds: Number(DOM.setRoundSeconds.value || 25),
-        startingBudget: Number(DOM.setStartBudget.value || 100)
-      });
-      if (!out.ok) throw new Error(out.error || "updateSettings failed");
-      setStatus(true, '設定已儲存');
-      S.lastRenderHash = "";
+      const o = await apiPOST("updateSettings", { roomId: S.roomId, hostToken: S.hostToken, playerId: S.playerId, maxRounds: Number(DOM.setMaxRounds.value || 8), roundSeconds: Number(DOM.setRoundSeconds.value || 25), startingBudget: Number(DOM.setStartBudget.value || 100) });
+      if (!o.ok) throw new Error(o.error || "updateSettings failed");
+      setStatus(true, '設定已儲存'); S.lastRenderHash = "";
     }
 
-    async function resetDatabaseAsHost() {
+    async function resetDb() {
       showErr('roomError', '');
       if (!S.hostToken) throw new Error("只有房主可以重置");
       if (!confirm("確定要重置所有資料嗎？")) return;
-      setStatus(true, '重置中…');
-      const out = await apiPOST("resetDatabase", { roomId: S.roomId, hostToken: S.hostToken });
-      if (!out.ok) throw new Error(out.error || "reset failed");
-      showLobby();
-      S.roomId = ""; S.playerId = ""; S.hostToken = ""; S.sinceEventId = 0; S.lastRenderHash = "";
-      DOM.roomsTbody.innerHTML = '<tr><td colspan="5" style="font-size:12px;color:var(--text-dim)">已重置</td></tr>';
+      const o = await apiPOST("resetDatabase", { roomId: S.roomId, hostToken: S.hostToken });
+      if (!o.ok) throw new Error(o.error || "reset failed");
+      showLobby(); S.roomId = ""; S.playerId = ""; S.hostToken = ""; S.sinceEventId = 0; S.lastRenderHash = "";
       setStatus(true, '資料庫已重置');
     }
 
-    // ===== Wire up buttons =====
-    function wireBtn(id, fn) {
+    /* ══════════════════════════════════════════════════════════════════════════
+     * 按鈕綁定（統一 try/catch 包裝）
+     * ════════════════════════════════════════════════════════════════════════ */
+    function wire(id, fn) {
       DOM[id].onclick = async () => {
-        try { await fn(); }
-        catch (err) {
-          const errTarget = DOM.viewRoom.classList.contains('hidden') ? 'lobbyError' : 'roomError';
-          showErr(errTarget, String(err.message || err));
-          setStatus(false, '操作失敗');
-          logMsg("ERR: " + String(err.message || err));
+        try { await fn(); } catch (e) {
+          const t = DOM.viewRoom.classList.contains('hidden') ? 'lobbyError' : 'roomError';
+          showErr(t, String(e.message || e)); setStatus(false, '操作失敗'); logMsg("ERR: " + String(e.message || e));
         }
       };
     }
 
-    wireBtn('btnRefresh', refreshLobby);
-    wireBtn('btnCreateRoom', createRoom);
-    wireBtn('btnJoinRoom', () => joinRoomById(DOM.joinRoomId.value));
-    wireBtn('btnLeave', async () => { showLobby(); setStatus(true, '回到大廳'); });
-    wireBtn('btnBid', sendBid);
-    wireBtn('btnStartRound', startRoundHost);
-    wireBtn('btnResolve', resolveHost);
-    wireBtn('btnNextRound', nextRoundHost);
-    wireBtn('btnResetDb', resetDatabaseAsHost);
-    wireBtn('btnSaveSettings', saveSettings);
-    wireBtn('btnRestart', async () => {
-      // Reset and go back to lobby
-      showLobby();
-      setStatus(true, '遊戲結束，回到大廳');
+    wire('btnRefresh', refreshLobby);
+    wire('btnCreateRoom', createRoom);
+    wire('btnJoinRoom', () => joinRoomById(DOM.joinRoomId.value));
+    wire('btnLeave', async () => {
+      showLobby(); setStatus(true, '回到大廳');
+      // 修正：離開房間後自動刷新房間列表
+      if (normLC(DOM.lobbyCode.value)) setTimeout(refreshLobby, 300);
     });
+    wire('btnBid', sendBid);
+    wire('btnStartRound', startRoundHost);
+    wire('btnResolve', resolveHost);
+    wire('btnNextRound', startRoundHost);   // 複用 startRound
+    wire('btnResetDb', resetDb);
+    wire('btnSaveSettings', saveSettings);
+    wire('btnRestart', async () => { showLobby(); setStatus(true, '遊戲結束，回到大廳'); });
+    wire('btnSetup', async () => { showErr('lobbyError', ''); setStatus(true, '初始化DB…'); const o = await apiPOST("setup", {}); if (!o.ok) throw new Error(o.error); setStatus(true, 'DB 初始化完成'); });
+    wire('btnDebug', async () => { showErr('lobbyError', ''); setStatus(true, '測試 API…'); const o = await apiGET("debugInfo", {}); if (!o.ok) throw new Error(o.error); setStatus(true, 'API OK ✓'); logMsg("DEBUG:\n" + JSON.stringify(o, null, 2)); });
 
-    wireBtn('btnSetup', async () => {
-      showErr('lobbyError', '');
-      setStatus(true, '初始化DB…');
-      const out = await apiPOST("setup", {});
-      if (!out.ok) throw new Error(out.error || "setup failed");
-      setStatus(true, 'DB 初始化完成');
-    });
+    // Debug log 折疊
+    DOM.debugToggle.onclick = () => { DOM.debugLog.classList.toggle('hidden'); DOM.debugToggle.textContent = DOM.debugLog.classList.contains('hidden') ? '▶ Debug Log' : '▼ Debug Log'; };
 
-    wireBtn('btnDebug', async () => {
-      showErr('lobbyError', '');
-      setStatus(true, '測試 API…');
-      const out = await apiGET("debugInfo", {});
-      if (!out.ok) throw new Error(out.error || "debugInfo failed");
-      setStatus(true, 'API OK ✓');
-      logMsg("DEBUG:\n" + JSON.stringify(out, null, 2));
-    });
-
-    // Debug toggle
-    DOM.debugToggle.onclick = () => {
-      DOM.debugLog.classList.toggle('hidden');
-      DOM.debugToggle.textContent = DOM.debugLog.classList.contains('hidden') ? '▶ Debug Log' : '▼ Debug Log';
-    };
-
-    // ===== Init =====
+    /* ══════════════════════════════════════════════════════════════════════════
+     * 初始化
+     * ════════════════════════════════════════════════════════════════════════ */
     (function init() {
-      try {
-        const u = new URL(window.location.href);
-        const rid = u.searchParams.get("roomId");
-        if (rid) DOM.joinRoomId.value = rid;
-      } catch (_) { }
+      try { const u = new URL(location.href); const r = u.searchParams.get("roomId"); if (r) DOM.joinRoomId.value = r; } catch (_) { }
       setStatus(true, '大廳就緒');
     })();
 
-    // Global error handlers
-    window.addEventListener("unhandledrejection", e => {
-      const msg = String(e.reason?.message || e.reason || "unknown");
-      logMsg("UNHANDLED: " + msg);
-    });
-    window.addEventListener("error", e => {
-      logMsg("ERROR: " + String(e.message || "unknown"));
-    });
+    // 全域錯誤攔截（避免靜默失敗）
+    window.addEventListener("unhandledrejection", e => logMsg("UNHANDLED: " + String(e.reason?.message || e.reason || "")));
+    window.addEventListener("error", e => logMsg("ERROR: " + String(e.message || "")));
   </script>
 </body>
 
