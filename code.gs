@@ -101,6 +101,8 @@ function routeAction_(action, p) {
     case "nextRound":       return apiStartRound_(p);  // nextRound 複用 startRound 邏輯
     case "restartGame":     return apiRestartGame_(p);
     case "kickPlayer":      return apiKickPlayer_(p);
+    case "leaveRoom":       return apiLeaveRoom_(p);
+    case "shuffleItems":    return apiShuffleItems_(p);
     case "resetDatabase":   return apiResetDatabase_(p);
     default: return { ok: false, error: "UNKNOWN_ACTION:" + action };
   }
@@ -272,114 +274,398 @@ function findRoomRow_(roomsSheet, roomId) {
   return findRowIndex_(roomsSheet, 0, roomId);
 }
 
-/** 寫入 seed items（100 項，每次 hiddenValue 隨機） */
-function seedItems_(itemsSheet) {
-  // [itemId, name, publicHint, minValue, maxValue]  — hiddenValue 在 min~max 間隨機
-  const defs = [
-    ["ITM001", "神秘古董",       "看起來很值錢，但可能是垃圾",   10, 60],
-    ["ITM002", "限量公仔",       "大家都說會漲價",               15, 50],
-    ["ITM003", "二手筆電",       "螢幕有刮痕，但能用",           10, 35],
-    ["ITM004", "奇怪的箱子",     "搖一搖會響",                   5,  45],
-    ["ITM005", "無敵券",         "規則外的力量感",               20, 70],
-    ["ITM006", "金元寶",         "閃閃發光的黃金",               30, 80],
-    ["ITM007", "紅包",           "裡面會放多少呢？",             5,  40],
-    ["ITM008", "古董花瓶",       "據說是明朝的…",                15, 55],
-    ["ITM009", "翡翠手鐲",       "通透碧綠，不知真假",           20, 90],
-    ["ITM010", "舊照相機",       "底片還能用嗎？",               5,  25],
-    ["ITM011", "名牌手錶",       "錶帶有點舊，但機芯很順",       30, 95],
-    ["ITM012", "破損的吉他",     "缺一根弦",                     3,  15],
-    ["ITM013", "陳年紅酒",       "1990 年份，保存狀況未知",       20, 75],
-    ["ITM014", "貓咪背包",       "毛茸茸的設計，很搶眼",         8,  35],
-    ["ITM015", "VR 眼鏡",        "二手的，鏡片有點花",           15, 45],
-    ["ITM016", "黃金魚鉤",       "據說能釣到龍王",               20, 70],
-    ["ITM017", "過期零食",       "已經過期三天了",               1,  10],
-    ["ITM018", "鑽石耳環",       "小小一顆，閃閃的",             40, 100],
-    ["ITM019", "手工肥皂",       "薰衣草味，很香",               3,  18],
-    ["ITM020", "古地圖",         "標示著寶藏位置？",             15, 65],
-    ["ITM021", "智慧音箱",       "只支援英文指令",               10, 35],
-    ["ITM022", "生鏽寶劍",       "劍身刻著奇怪的文字",           12, 55],
-    ["ITM023", "蘭花盆栽",       "開了三朵，很漂亮",             10, 40],
-    ["ITM024", "簽名棒球",       "看不清是誰的簽名",             15, 75],
-    ["ITM025", "機械鍵盤",       "Cherry 軟軸，手感一流",        20, 55],
-    ["ITM026", "迷你無人機",     "電池續航 5 分鐘",              12, 45],
-    ["ITM027", "神秘藥水",       "瓶身寫著『喝了變強』",         5,  30],
-    ["ITM028", "油畫作品",       "署名看不清楚",                 25, 90],
-    ["ITM029", "復古收音機",     "還能收到 FM 電台",             8,  30],
-    ["ITM030", "水晶球",         "裡面有氣泡，閃閃發光",         15, 55],
-    ["ITM031", "狗狗雨衣",       "XL 號，適合大型犬",            5,  20],
-    ["ITM032", "珍珠項鍊",       "每顆大小不太一致",             20, 80],
-    ["ITM033", "二手遊戲機",     "附兩個手把",                   20, 60],
-    ["ITM034", "瑜伽墊",         "微微有使用痕跡",               3,  15],
-    ["ITM035", "銀色懷錶",       "能走，但偶爾慢幾分鐘",         15, 55],
-    ["ITM036", "神秘信封",       "封口用火漆封著",               5,  45],
-    ["ITM037", "有機蜂蜜",       "農場直送，純天然",             8,  28],
-    ["ITM038", "電競滑鼠",       "RGB 燈效全開",                 12, 40],
-    ["ITM039", "陶瓷茶壺",       "日式風格，釉色美麗",           15, 50],
-    ["ITM040", "登山背包",       "60 公升，防水材質",             18, 55],
-    ["ITM041", "古銅色指南針",   "磁針還能動",                   10, 35],
-    ["ITM042", "手繪撲克牌",     "每張都是獨特畫作",             12, 45],
-    ["ITM043", "桌上型風扇",     "三段風速，有點吵",             3,  18],
-    ["ITM044", "鍍金相框",       "適合放全家福",                 5,  25],
-    ["ITM045", "真皮皮夾",       "義大利進口，有壓紋",           20, 65],
-    ["ITM046", "迷你投影機",     "畫質勉強能看",                 15, 55],
-    ["ITM047", "竹編籃子",       "手工製作，很精緻",             5,  22],
-    ["ITM048", "大理石棋盤",     "附完整棋子",                   20, 70],
-    ["ITM049", "香氛蠟燭組",     "六種味道",                     8,  30],
-    ["ITM050", "折疊腳踏車",     "輪胎需要打氣",                 25, 80],
-    ["ITM051", "老式打字機",     "鍵帽有些卡住",                 15, 50],
-    ["ITM052", "太陽能充電器",   "陰天充電超慢",                 8,  35],
-    ["ITM053", "手沖咖啡組",     "含磨豆機和濾杯",               12, 45],
-    ["ITM054", "毛筆套組",       "書法愛好者必備",               5,  25],
-    ["ITM055", "藍芽喇叭",       "防水，音質不錯",               15, 50],
-    ["ITM056", "盆栽仙人掌",     "三年沒澆水都活著",             3,  15],
-    ["ITM057", "皮革公事包",     "有商務質感",                   25, 70],
-    ["ITM058", "復古桌燈",       "鎢絲燈泡，暖黃光",             10, 35],
-    ["ITM059", "木雕擺件",       "手工雕刻的貓頭鷹",             15, 55],
-    ["ITM060", "行李秤",         "出國旅行神器",                 3,  18],
-    ["ITM061", "紫砂茶壺",       "刻有大師印章",                 40, 100],
-    ["ITM062", "寵物自動餵食器", "可設定時間",                   10, 40],
-    ["ITM063", "古典吊燈",       "需要重新接電線",               18, 60],
-    ["ITM064", "天文望遠鏡",     "入門款，能看月球坑洞",         25, 80],
-    ["ITM065", "手工皮帶",       "牛皮材質，銅扣環",             12, 45],
-    ["ITM066", "老唱片",         "鄧麗君經典專輯",               15, 55],
-    ["ITM067", "保溫便當盒",     "三層式，很實用",               5,  25],
-    ["ITM068", "迷彩帳篷",       "雙人帳，附營釘",               20, 65],
-    ["ITM069", "骨董電話",       "轉盤式，充滿年代感",           15, 50],
-    ["ITM070", "水彩顏料組",     "24 色專業級",                  8,  35],
-    ["ITM071", "黑膠唱片機",     "復古造型，能正常播放",         30, 90],
-    ["ITM072", "編織毛毯",       "手工羊毛，冬天暖和",           10, 40],
-    ["ITM073", "象棋組",         "檀木材質，質感好",             18, 60],
-    ["ITM074", "螢幕掛燈",       "護眼不反光",                   10, 35],
-    ["ITM075", "露營椅",         "鋁合金骨架，輕便",             8,  30],
-    ["ITM076", "琥珀墜飾",       "裡面好像有蟲子",               20, 80],
-    ["ITM077", "按摩槍",         "三段力道，筋膜放鬆",           15, 55],
-    ["ITM078", "傳統摺扇",       "檀香木骨架",                   8,  35],
-    ["ITM079", "電子書閱讀器",   "螢幕有一條淡淡的線",           18, 60],
-    ["ITM080", "手工果醬",       "季節限定草莓口味",             3,  20],
-    ["ITM081", "黃銅燭台",       "成對的，很有氣氛",             12, 45],
-    ["ITM082", "運動水壺",       "保冷 24 小時",                 5,  25],
-    ["ITM083", "老式鐘擺鐘",     "每小時會響一次",               25, 80],
-    ["ITM084", "手作陶杯",       "釉色獨一無二",                 8,  30],
-    ["ITM085", "防水相機",       "適合水下攝影",                 20, 70],
-    ["ITM086", "薄荷精油",       "提神醒腦好物",                 3,  18],
-    ["ITM087", "紀念幣套組",     "十二生肖完整版",               30, 90],
-    ["ITM088", "羽毛筆",         "附墨水瓶",                     5,  25],
-    ["ITM089", "空拍機零件",     "不確定能不能裝上",             2,  15],
-    ["ITM090", "日式風鈴",       "玻璃材質，聲音清脆",           5,  20],
-    ["ITM091", "皮革日記本",     "附鎖扣，很有質感",             10, 35],
-    ["ITM092", "迷你魚缸",       "含過濾器和LED燈",              10, 40],
-    ["ITM093", "古董懷爐",       "銅製的，可以用現代油",         12, 50],
-    ["ITM094", "摺紙藝術品",     "1000 隻紙鶴串",                8,  35],
-    ["ITM095", "手工吉他撥片",   "玳瑁材質，音色溫暖",           5,  25],
-    ["ITM096", "景泰藍花瓶",     "掐絲琺瑯工藝",                35, 100],
-    ["ITM097", "貓眼石戒指",     "有神秘光芒在流動",             25, 85],
-    ["ITM098", "老式地球儀",     "還是蘇聯時代的版本",           15, 55],
-    ["ITM099", "機械式鋼筆",     "14K 金筆尖，書寫流暢",        20, 70],
-    ["ITM100", "龍銀(舊台幣)",   "日治時期流通的銀幣",           40, 100]
+/** 取得所有物品定義 [itemId, name, publicHint, minValue, maxValue] — 300 項 */
+function getItemDefs_() {
+  return [
+    ["ITM001","神秘古董 Antique","看起來很值錢 Looks valuable",10,60],
+    ["ITM002","限量公仔 Figure","大家都說會漲價 May appreciate",15,50],
+    ["ITM003","二手筆電 Laptop","螢幕有刮痕 Scratched screen",10,35],
+    ["ITM004","奇怪的箱子 Mystery Box","搖一搖會響 Rattles when shaken",5,45],
+    ["ITM005","無敵券 Power Ticket","規則外的力量 Rule-breaking",20,70],
+    ["ITM006","金元寶 Gold Ingot","閃閃發光 Shiny gold",30,80],
+    ["ITM007","紅包 Red Envelope","裡面放多少呢 How much inside?",5,40],
+    ["ITM008","古董花瓶 Antique Vase","據說明朝的 Ming dynasty?",15,55],
+    ["ITM009","翡翠手鐲 Jade Bracelet","通透碧綠 Translucent green",20,90],
+    ["ITM010","舊照相機 Old Camera","底片還能用嗎 Film still works?",5,25],
+    ["ITM011","名牌手錶 Watch","機芯很順 Smooth movement",30,95],
+    ["ITM012","破損的吉他 Guitar","缺一根弦 Missing a string",3,15],
+    ["ITM013","陳年紅酒 Wine","1990年份 Vintage 1990",20,75],
+    ["ITM014","貓咪背包 Cat Bag","毛茸茸 Fluffy design",8,35],
+    ["ITM015","VR眼鏡 VR Headset","鏡片有點花 Slightly worn",15,45],
+    ["ITM016","黃金魚鉤 Gold Hook","能釣到龍王 Catch a dragon?",20,70],
+    ["ITM017","過期零食 Expired Snack","過期三天 3 days expired",1,10],
+    ["ITM018","鑽石耳環 Diamond Earring","小小一顆 Tiny but shiny",40,100],
+    ["ITM019","手工肥皂 Handmade Soap","薰衣草味 Lavender scent",3,18],
+    ["ITM020","古地圖 Old Map","標示寶藏位置 Treasure map?",15,65],
+    ["ITM021","智慧音箱 Smart Speaker","只支援英文 English only",10,35],
+    ["ITM022","生鏽寶劍 Rusty Sword","刻著奇怪文字 Strange runes",12,55],
+    ["ITM023","蘭花盆栽 Orchid","開了三朵 Three blooms",10,40],
+    ["ITM024","簽名棒球 Signed Ball","看不清簽名 Unreadable sig",15,75],
+    ["ITM025","機械鍵盤 Mech Keyboard","Cherry軟軸 Cherry switches",20,55],
+    ["ITM026","迷你無人機 Mini Drone","續航5分鐘 5min battery",12,45],
+    ["ITM027","神秘藥水 Potion","喝了變強 Drink to power up",5,30],
+    ["ITM028","油畫作品 Oil Painting","署名看不清 Unsigned?",25,90],
+    ["ITM029","復古收音機 Retro Radio","還能收FM Can still tune FM",8,30],
+    ["ITM030","水晶球 Crystal Ball","閃閃發光 Sparkling bubbles",15,55],
+    ["ITM031","狗狗雨衣 Dog Raincoat","XL號 For large dogs",5,20],
+    ["ITM032","珍珠項鍊 Pearl Necklace","大小不一 Uneven pearls",20,80],
+    ["ITM033","二手遊戲機 Console","附兩個手把 2 controllers",20,60],
+    ["ITM034","瑜伽墊 Yoga Mat","微有痕跡 Slightly used",3,15],
+    ["ITM035","銀色懷錶 Pocket Watch","偶爾慢幾分 Sometimes slow",15,55],
+    ["ITM036","神秘信封 Mystery Letter","火漆封口 Wax sealed",5,45],
+    ["ITM037","有機蜂蜜 Organic Honey","農場直送 Farm fresh",8,28],
+    ["ITM038","電競滑鼠 Gaming Mouse","RGB全開 Full RGB",12,40],
+    ["ITM039","陶瓷茶壺 Tea Pot","日式風格 Japanese style",15,50],
+    ["ITM040","登山背包 Hiking Pack","60L防水 60L waterproof",18,55],
+    ["ITM041","古銅指南針 Compass","磁針還能動 Needle works",10,35],
+    ["ITM042","手繪撲克牌 Art Cards","每張都獨特 Each one unique",12,45],
+    ["ITM043","桌上風扇 Desk Fan","三段風速 3 speeds",3,18],
+    ["ITM044","鍍金相框 Gold Frame","適合全家福 For family photo",5,25],
+    ["ITM045","真皮皮夾 Leather Wallet","義大利進口 Italian leather",20,65],
+    ["ITM046","迷你投影機 Projector","畫質勉強 Barely watchable",15,55],
+    ["ITM047","竹編籃子 Bamboo Basket","手工製作 Handcrafted",5,22],
+    ["ITM048","大理石棋盤 Marble Chess","附完整棋子 Full set",20,70],
+    ["ITM049","香氛蠟燭組 Candle Set","六種味道 6 scents",8,30],
+    ["ITM050","折疊腳踏車 Folding Bike","輪胎需打氣 Needs air",25,80],
+    ["ITM051","老式打字機 Typewriter","鍵帽有些卡 Some keys stuck",15,50],
+    ["ITM052","太陽能充電器 Solar Charger","陰天很慢 Slow on cloudy days",8,35],
+    ["ITM053","手沖咖啡組 Pour Over Set","含磨豆機 Includes grinder",12,45],
+    ["ITM054","毛筆套組 Brush Set","書法必備 Calligraphy kit",5,25],
+    ["ITM055","藍芽喇叭 BT Speaker","防水音質好 Waterproof",15,50],
+    ["ITM056","仙人掌 Cactus","三年沒澆水 3yr no water",3,15],
+    ["ITM057","皮革公事包 Briefcase","商務質感 Business style",25,70],
+    ["ITM058","復古桌燈 Retro Lamp","鎢絲燈泡 Tungsten bulb",10,35],
+    ["ITM059","木雕擺件 Wood Carving","手工貓頭鷹 Carved owl",15,55],
+    ["ITM060","行李秤 Luggage Scale","旅行神器 Travel essential",3,18],
+    ["ITM061","紫砂茶壺 Yixing Teapot","大師印章 Master stamp",40,100],
+    ["ITM062","自動餵食器 Auto Feeder","可設定時間 Programmable",10,40],
+    ["ITM063","古典吊燈 Chandelier","需重新接線 Needs rewiring",18,60],
+    ["ITM064","天文望遠鏡 Telescope","能看月坑 See moon craters",25,80],
+    ["ITM065","手工皮帶 Leather Belt","牛皮銅扣 Brass buckle",12,45],
+    ["ITM066","老唱片 Vinyl Record","經典專輯 Classic album",15,55],
+    ["ITM067","保溫便當盒 Lunch Box","三層式 3-tier insulated",5,25],
+    ["ITM068","迷彩帳篷 Camo Tent","雙人帳 2-person",20,65],
+    ["ITM069","骨董電話 Rotary Phone","轉盤式 Vintage rotary",15,50],
+    ["ITM070","水彩顏料 Watercolors","24色專業 24 pro colors",8,35],
+    ["ITM071","黑膠唱片機 Turntable","能正常播放 Fully working",30,90],
+    ["ITM072","編織毛毯 Wool Blanket","手工羊毛 Hand-knit wool",10,40],
+    ["ITM073","象棋組 Chess Set","檀木材質 Sandalwood",18,60],
+    ["ITM074","螢幕掛燈 Monitor Light","護眼不反光 Anti-glare",10,35],
+    ["ITM075","露營椅 Camp Chair","鋁合金輕便 Aluminum frame",8,30],
+    ["ITM076","琥珀墜飾 Amber Pendant","裡面有蟲 Bug inside",20,80],
+    ["ITM077","按摩槍 Massage Gun","三段力道 3 intensity",15,55],
+    ["ITM078","傳統摺扇 Folding Fan","檀香木 Sandalwood frame",8,35],
+    ["ITM079","電子書閱讀器 E-Reader","螢幕有線 Screen line",18,60],
+    ["ITM080","手工果醬 Handmade Jam","草莓限定 Strawberry ltd",3,20],
+    ["ITM081","黃銅燭台 Brass Candle","成對有氣氛 Pair, romantic",12,45],
+    ["ITM082","運動水壺 Sports Bottle","保冷24小時 24hr cold",5,25],
+    ["ITM083","老鐘擺鐘 Pendulum Clock","每小時響 Chimes hourly",25,80],
+    ["ITM084","手作陶杯 Ceramic Cup","釉色獨一 Unique glaze",8,30],
+    ["ITM085","防水相機 Dive Camera","水下攝影 Underwater",20,70],
+    ["ITM086","薄荷精油 Mint Oil","提神醒腦 Refreshing",3,18],
+    ["ITM087","紀念幣套組 Coin Set","十二生肖 12 zodiac",30,90],
+    ["ITM088","羽毛筆 Quill Pen","附墨水瓶 Includes ink",5,25],
+    ["ITM089","空拍機零件 Drone Parts","不確定能裝 May not fit",2,15],
+    ["ITM090","日式風鈴 Wind Chime","玻璃清脆 Glass, crisp",5,20],
+    ["ITM091","皮革日記本 Leather Diary","附鎖扣 With lock",10,35],
+    ["ITM092","迷你魚缸 Mini Aquarium","含過濾LED Filter+LED",10,40],
+    ["ITM093","古董懷爐 Antique Warmer","銅製 Copper, works",12,50],
+    ["ITM094","摺紙藝術 Origami Art","1000紙鶴 1000 cranes",8,35],
+    ["ITM095","吉他撥片 Guitar Pick","玳瑁材質 Tortoiseshell",5,25],
+    ["ITM096","景泰藍花瓶 Cloisonne","掐絲琺瑯 Enamel craft",35,100],
+    ["ITM097","貓眼石戒指 Cat-eye Ring","神秘光芒 Mysterious glow",25,85],
+    ["ITM098","老地球儀 Globe","蘇聯版本 Soviet era",15,55],
+    ["ITM099","機械鋼筆 Fountain Pen","14K金筆尖 14K gold nib",20,70],
+    ["ITM100","龍銀 Silver Coin","日治銀幣 Colonial era",40,100],
+    ["ITM101","迷你烤箱 Mini Oven","能烤吐司 Toasts bread",8,30],
+    ["ITM102","絲綢圍巾 Silk Scarf","真絲手工 Handmade silk",15,55],
+    ["ITM103","古銅望遠鏡 Brass Spyglass","海盜風 Pirate style",20,65],
+    ["ITM104","竹製滑板 Bamboo Board","環保設計 Eco-friendly",12,45],
+    ["ITM105","手工巧克力 Artisan Choco","限量口味 Limited flavor",5,25],
+    ["ITM106","老舊地毯 Vintage Rug","波斯風格 Persian style",25,85],
+    ["ITM107","LED植物燈 Grow Light","全光譜 Full spectrum",8,35],
+    ["ITM108","骨瓷茶杯 Bone China Cup","英式下午茶 English tea",12,45],
+    ["ITM109","木質音樂盒 Music Box","旋轉芭蕾 Ballet dancer",10,40],
+    ["ITM110","露營燈 Lantern","太陽能充電 Solar powered",6,25],
+    ["ITM111","手工皮鞋 Leather Shoes","義大利製 Italian made",30,90],
+    ["ITM112","古董鐘 Desk Clock","需上發條 Needs winding",15,50],
+    ["ITM113","望遠鏡 Binoculars","10x50倍率 10x50 zoom",20,65],
+    ["ITM114","茶葉禮盒 Tea Gift Box","高山烏龍 Oolong tea",10,40],
+    ["ITM115","機械錶 Mechanical Watch","自動上鏈 Auto-wind",35,95],
+    ["ITM116","陶笛 Ocarina","12孔 12-hole ceramic",5,22],
+    ["ITM117","皮革手環 Leather Cuff","編織設計 Braided design",8,30],
+    ["ITM118","古董鏡 Antique Mirror","木框雕花 Carved frame",18,60],
+    ["ITM119","電動牙刷 E-Toothbrush","充電式 Rechargeable",6,25],
+    ["ITM120","手工蠟封 Wax Seal Kit","含印章 With stamp",5,22],
+    ["ITM121","黑曜石 Obsidian","火山玻璃 Volcanic glass",10,40],
+    ["ITM122","復古打火機 Retro Lighter","黃銅機身 Brass body",8,35],
+    ["ITM123","砧板 Cutting Board","相思木 Acacia wood",5,20],
+    ["ITM124","乾燥花束 Dried Flowers","永生花 Everlasting",8,30],
+    ["ITM125","銅製書擋 Bookends","馬頭造型 Horse head",12,45],
+    ["ITM126","迷你吸塵器 Mini Vacuum","桌面用 Desktop size",5,22],
+    ["ITM127","日式便當 Bento Box","漆器風格 Lacquerware",10,35],
+    ["ITM128","手搖磨豆機 Hand Grinder","陶瓷磨芯 Ceramic burr",8,30],
+    ["ITM129","摺疊傘 Folding Umbrella","抗UV UV-proof",3,18],
+    ["ITM130","木製拼圖 Wood Puzzle","1000片 1000 pieces",8,30],
+    ["ITM131","香水 Perfume","花香調 Floral notes",15,55],
+    ["ITM132","陶製花瓶 Ceramic Vase","手拉坯 Hand-thrown",10,40],
+    ["ITM133","行動電源 Power Bank","20000mAh capacity",8,30],
+    ["ITM134","棉麻圍裙 Apron","廚師風格 Chef style",5,20],
+    ["ITM135","銅鈴 Brass Bell","清脆響亮 Clear ring",3,15],
+    ["ITM136","手工紙 Handmade Paper","花瓣嵌入 Petal embedded",5,22],
+    ["ITM137","竹蒸籠 Bamboo Steamer","三層 3-tier",8,28],
+    ["ITM138","懷舊糖果 Retro Candy","鐵罐裝 Tin can",3,15],
+    ["ITM139","羊毛氈 Wool Felt","手作材料 Craft supply",5,20],
+    ["ITM140","擴香瓶 Diffuser","藤條式 Reed type",8,30],
+    ["ITM141","金箔畫 Gold Leaf Art","手工貼金 Hand gilded",25,80],
+    ["ITM142","竹木筷組 Chopsticks Set","雷射雕刻 Laser engraved",5,22],
+    ["ITM143","手提燈 Hand Lantern","復古造型 Vintage style",10,35],
+    ["ITM144","貝殼項鍊 Shell Necklace","海邊拾取 Beach found",5,25],
+    ["ITM145","銀髮簪 Silver Hairpin","古典美 Classical beauty",15,55],
+    ["ITM146","迷你盆景 Mini Bonsai","五年樹齡 5-year-old",10,40],
+    ["ITM147","書法卷軸 Calligraphy Scroll","大師真跡? Master's work?",20,75],
+    ["ITM148","老照片 Old Photo","黑白年代 B&W era",5,25],
+    ["ITM149","手工編織袋 Woven Bag","天然材料 Natural fiber",8,30],
+    ["ITM150","銅製天秤 Brass Scale","科學風格 Scientific look",15,50],
+    ["ITM151","玻璃筆 Glass Pen","彩虹色 Rainbow color",10,40],
+    ["ITM152","手工餅乾 Cookies","禮盒裝 Gift box",3,18],
+    ["ITM153","古典書籤 Bookmark","金屬雕花 Metal carved",3,15],
+    ["ITM154","胡桃木盒 Walnut Box","珠寶收納 Jewelry box",12,45],
+    ["ITM155","老式眼鏡 Vintage Glasses","圓框金屬 Round metal",10,35],
+    ["ITM156","手工冰淇淋 Artisan Gelato","義式風味 Italian style",3,18],
+    ["ITM157","銅製門環 Brass Knocker","獅頭造型 Lion head",10,40],
+    ["ITM158","迷你地球儀 Mini Globe","桌上型 Desktop size",8,30],
+    ["ITM159","手繪明信片 Postcards","一組十張 Set of 10",3,15],
+    ["ITM160","陶塑擺飾 Clay Figure","動物造型 Animal shape",8,30],
+    ["ITM161","紫水晶 Amethyst","天然原石 Natural raw",15,55],
+    ["ITM162","老軍帽 Military Cap","二戰風格 WWII style",12,45],
+    ["ITM163","手工鈎針 Crochet Set","附毛線 With yarn",5,22],
+    ["ITM164","銅版畫 Etching Print","限量簽名 Signed limited",20,65],
+    ["ITM165","竹蜻蜓 Bamboo Copter","手工製 Handcrafted",2,12],
+    ["ITM166","錫杯 Pewter Cup","中世紀風 Medieval style",10,35],
+    ["ITM167","手工領帶 Handmade Tie","真絲 Pure silk",12,45],
+    ["ITM168","木雕面具 Wood Mask","部落風格 Tribal style",15,55],
+    ["ITM169","手工香包 Sachet","中藥材料 Herbal scent",3,15],
+    ["ITM170","老式秤錘 Old Weight","黃銅製 Brass made",8,30],
+    ["ITM171","珊瑚飾品 Coral Jewelry","粉紅色 Pink coral",20,70],
+    ["ITM172","棉花糖機 Cotton Candy","迷你型 Mini machine",10,40],
+    ["ITM173","手工燈罩 Lampshade","彩繪玻璃 Stained glass",15,50],
+    ["ITM174","木製陀螺 Spinning Top","手工車削 Hand-turned",3,15],
+    ["ITM175","象牙白棋 Ivory-look Chess","仿象牙 Faux ivory",20,65],
+    ["ITM176","手搖風琴 Hurdy-Gurdy","需要調音 Needs tuning",30,90],
+    ["ITM177","印度薰香 Indian Incense","檀香味 Sandalwood",3,15],
+    ["ITM178","手工橡皮章 Rubber Stamp","可客製 Customizable",5,22],
+    ["ITM179","老鑰匙 Antique Key","不知開什麼 Unknown lock",5,25],
+    ["ITM180","琉璃珠 Glass Bead","手工吹製 Hand-blown",8,35],
+    ["ITM181","手工麵條 Handmade Noodle","日曬乾燥 Sun-dried",3,15],
+    ["ITM182","老式計算機 Calculator","機械式 Mechanical",10,40],
+    ["ITM183","手工石鹼 Stone Soap","火山泥 Volcanic mud",3,18],
+    ["ITM184","銀質書籤 Silver Bookmark","花紋精緻 Fine pattern",8,30],
+    ["ITM185","竹搖椅 Bamboo Rocker","手編座面 Hand-woven seat",20,65],
+    ["ITM186","瑪瑙戒指 Agate Ring","天然紋路 Natural grain",12,45],
+    ["ITM187","手沖壺 Gooseneck Kettle","細嘴 Pour-over style",10,35],
+    ["ITM188","老舊郵票 Vintage Stamps","一頁20枚 Sheet of 20",8,35],
+    ["ITM189","珐瑯別針 Enamel Pin","限量設計 Limited edition",3,18],
+    ["ITM190","手工燒酒 Craft Spirits","小批量 Small batch",10,40],
+    ["ITM191","木刻版畫 Woodblock Print","浮世繪風 Ukiyo-e style",15,55],
+    ["ITM192","老玩具車 Toy Car","鐵皮製 Tin plate",8,30],
+    ["ITM193","手工涼鞋 Sandals","皮革手縫 Leather handmade",12,40],
+    ["ITM194","迷你望遠鏡 Pocket Scope","摺疊式 Foldable",5,22],
+    ["ITM195","手工牛軋糖 Nougat","花生口味 Peanut flavor",3,15],
+    ["ITM196","青銅壺 Bronze Pot","綠鏽古味 Green patina",20,65],
+    ["ITM197","手繪陶盤 Painted Plate","花鳥圖案 Bird & flower",10,40],
+    ["ITM198","老式鬧鐘 Alarm Clock","雙鈴 Twin bell",5,22],
+    ["ITM199","麻繩吊籃 Macrame Hanger","波西米亞 Boho style",5,22],
+    ["ITM200","手工護唇膏 Lip Balm","蜂蠟配方 Beeswax formula",2,12],
+    ["ITM201","銀質袖扣 Silver Cufflinks","紳士風 Gentleman style",15,50],
+    ["ITM202","老算盤 Abacus","花梨木 Rosewood frame",10,40],
+    ["ITM203","手工貝雕 Shell Carving","精細工藝 Fine craft",15,55],
+    ["ITM204","復古鉛筆盒 Pencil Case","鐵製 Tin case",3,15],
+    ["ITM205","手工乳酪 Artisan Cheese","熟成三月 3-month aged",5,25],
+    ["ITM206","老式煤油燈 Kerosene Lamp","附燈芯 With wick",10,35],
+    ["ITM207","手作拇指琴 Kalimba","17鍵 17-key",8,30],
+    ["ITM208","玉石擺件 Jade Ornament","和田玉? Hetian jade?",25,85],
+    ["ITM209","手工紮染 Tie-dye Cloth","天然染料 Natural dye",5,22],
+    ["ITM210","老漫畫 Vintage Comic","初版? First edition?",10,45],
+    ["ITM211","銅鏡 Bronze Mirror","仿漢代 Han dynasty style",15,50],
+    ["ITM212","手工年糕 Rice Cake","傳統配方 Traditional",3,15],
+    ["ITM213","復古胸針 Vintage Brooch","寶石鑲嵌 Gemstone inlay",12,45],
+    ["ITM214","竹笛 Bamboo Flute","手工調音 Hand-tuned",5,25],
+    ["ITM215","手工繡花 Embroidery","蘇繡風格 Suzhou style",15,55],
+    ["ITM216","老相框 Vintage Frame","銅製雕花 Brass carved",8,30],
+    ["ITM217","手工豆腐乳 Fermented Tofu","傳統釀造 Traditional",2,12],
+    ["ITM218","紅木書架 Rosewood Shelf","迷你桌上型 Desktop mini",20,65],
+    ["ITM219","老式電扇 Vintage Fan","鐵製 Iron blade",12,40],
+    ["ITM220","手工毛線帽 Knit Hat","冬季限定 Winter special",5,20],
+    ["ITM221","玻璃花瓶 Glass Vase","穆拉諾 Murano style",15,55],
+    ["ITM222","老火車模型 Train Model","HO比例 HO scale",20,65],
+    ["ITM223","手工辣醬 Hot Sauce","魔鬼椒 Ghost pepper",3,18],
+    ["ITM224","檜木名片盒 Cypress Case","芳香 Aromatic",8,30],
+    ["ITM225","手工刺繡包 Embroidery Bag","民族風 Ethnic style",10,40],
+    ["ITM226","老銅鎖 Brass Lock","附鑰匙 With key",8,30],
+    ["ITM227","紫檀木梳 Sandalwood Comb","防靜電 Anti-static",10,35],
+    ["ITM228","手工酸菜 Sauerkraut","自然發酵 Natural ferment",2,12],
+    ["ITM229","錫製酒壺 Pewter Flask","隨身攜帶 Pocket size",10,35],
+    ["ITM230","古典吉他弦 Guitar Strings","尼龍 Nylon set",3,15],
+    ["ITM231","手工鑰匙圈 Keychain","皮革編織 Leather braided",3,15],
+    ["ITM232","月光石 Moonstone","藍色光暈 Blue sheen",12,45],
+    ["ITM233","竹製筷架 Chopstick Rest","一組六個 Set of 6",3,15],
+    ["ITM234","手工肉乾 Jerky","黑胡椒味 Black pepper",3,18],
+    ["ITM235","銅質名片夾 Card Holder","商務風 Business style",5,22],
+    ["ITM236","老式顯微鏡 Microscope","教學用 Educational",20,65],
+    ["ITM237","手工果乾 Dried Fruit","無添加 No additives",3,15],
+    ["ITM238","海星標本 Starfish","乾燥處理 Preserved",3,15],
+    ["ITM239","手工花冠 Flower Crown","永生花 Preserved flowers",5,22],
+    ["ITM240","磁鐵玩具 Magnet Toy","創意造型 Creative shapes",5,20],
+    ["ITM241","手工蛋捲 Egg Roll","古早味 Traditional taste",3,15],
+    ["ITM242","老式放大鏡 Magnifier","黃銅柄 Brass handle",5,22],
+    ["ITM243","手工木湯匙 Wood Spoon","橄欖木 Olive wood",3,15],
+    ["ITM244","復古手帕 Vintage Hanky","蕾絲邊 Lace trimmed",3,18],
+    ["ITM245","手工陶鈴 Clay Bell","清脆聲 Clear tone",3,15],
+    ["ITM246","古董火柴盒 Match Box","收藏用 Collectible",2,12],
+    ["ITM247","手工魚丸 Fish Ball","新鮮現做 Freshly made",2,12],
+    ["ITM248","老式筆筒 Pen Holder","竹製 Bamboo carved",5,22],
+    ["ITM249","手工米酒 Rice Wine","傳統釀造 Traditional brew",5,25],
+    ["ITM250","皮影戲偶 Shadow Puppet","牛皮 Cowhide craft",15,50],
+    ["ITM251","鍛鐵燭台 Iron Candle","工業風 Industrial style",10,35],
+    ["ITM252","手工鳳梨酥 Pineapple Cake","土鳳梨 Native pineapple",3,18],
+    ["ITM253","古董拐杖 Walking Cane","藤製龍頭 Dragon handle",20,65],
+    ["ITM254","玻璃彈珠 Marbles","一袋50顆 Bag of 50",2,12],
+    ["ITM255","手工洗髮餅 Shampoo Bar","草本配方 Herbal formula",3,15],
+    ["ITM256","老式墨水瓶 Ink Bottle","寶藍色 Royal blue",5,22],
+    ["ITM257","手工扇墜 Fan Charm","玉石 Jade pendant",8,30],
+    ["ITM258","黃楊木雕 Boxwood Carving","微型佛像 Mini Buddha",20,65],
+    ["ITM259","手工花生糖 Peanut Candy","芝麻口味 Sesame flavor",2,12],
+    ["ITM260","復古郵筒模型 Mailbox Model","鐵皮 Tin plate",5,22],
+    ["ITM261","手工陶壺 Clay Pot","柴燒 Wood-fired",15,50],
+    ["ITM262","老式溫度計 Thermometer","水銀 Mercury glass",5,22],
+    ["ITM263","手工鞋墊 Insole","竹炭 Bamboo charcoal",2,12],
+    ["ITM264","龍涎香 Ambergris","真偽未知 Authenticity unknown",30,100],
+    ["ITM265","手工刮痧板 Gua Sha","牛角製 Buffalo horn",5,22],
+    ["ITM266","老式煙斗 Vintage Pipe","石楠木 Briar wood",15,50],
+    ["ITM267","手工棉被 Cotton Quilt","手工彈棉 Hand-carded",20,60],
+    ["ITM268","銅製獎杯 Brass Trophy","無銘文 Unmarked",10,35],
+    ["ITM269","手工太妃糖 Toffee","海鹽焦糖 Salted caramel",2,12],
+    ["ITM270","老式收銀機 Cash Register","裝飾用 Decorative",25,80],
+    ["ITM271","手工蒲扇 Palm Fan","夏日必備 Summer essential",2,10],
+    ["ITM272","玉簪 Jade Hairpin","白玉 White jade",15,55],
+    ["ITM273","手工雪花酥 Nougat Crisp","杏仁口味 Almond flavor",3,15],
+    ["ITM274","舊版桌遊 Board Game","絕版 Out of print",10,45],
+    ["ITM275","手工掛毯 Tapestry","幾何圖案 Geometric pattern",15,50],
+    ["ITM276","鐵壺 Iron Kettle","南部鐵器 Nambu ironware",25,80],
+    ["ITM277","手工咖哩粉 Curry Powder","自製配方 Homemade blend",3,15],
+    ["ITM278","銅製羅盤 Brass Compass","風水用 Feng shui tool",10,40],
+    ["ITM279","手工蜜餞 Preserved Fruit","梅子口味 Plum flavor",2,12],
+    ["ITM280","老式手搖鑽 Hand Drill","木工用 Woodworking",8,30],
+    ["ITM281","手工玻璃杯 Blown Glass","彩色 Colorful",8,30],
+    ["ITM282","古董撲克牌 Antique Cards","完整一副 Full deck",5,25],
+    ["ITM283","手工竹蓆 Bamboo Mat","清涼 Cool in summer",5,20],
+    ["ITM284","老式電表 Voltmeter","銅製指針 Copper needle",10,35],
+    ["ITM285","手工魚酥 Fish Crisp","傳統零食 Traditional snack",2,12],
+    ["ITM286","銅製號角 Brass Horn","裝飾用 Decorative",15,50],
+    ["ITM287","手工花枕 Flower Pillow","刺繡 Embroidered",8,30],
+    ["ITM288","老式縫紉機 Sewing Machine","腳踏式 Pedal type",25,80],
+    ["ITM289","手工牛角梳 Horn Comb","水牛角 Buffalo horn",5,22],
+    ["ITM290","田黃石 Tianhuang Stone","壽山石? Shoushan stone?",35,100],
+    ["ITM291","手工竹杯 Bamboo Cup","天然漆 Natural lacquer",3,15],
+    ["ITM292","老式油燈 Oil Lamp","黃銅 Brass body",8,30],
+    ["ITM293","手工肉鬆 Pork Floss","手工炒製 Hand-fried",3,15],
+    ["ITM294","琉璃擺件 Glass Ornament","多色 Multicolored",15,50],
+    ["ITM295","手工綠豆糕 Mung Cake","傳統糕點 Traditional",2,12],
+    ["ITM296","古董門把 Antique Handle","鑄鐵花紋 Cast iron",8,30],
+    ["ITM297","手工藕粉 Lotus Powder","杭州出產 From Hangzhou",3,15],
+    ["ITM298","銅製望遠鏡 Brass Scope","三段伸縮 3-section",15,50],
+    ["ITM299","手工芋圓 Taro Balls","Q彈 Chewy texture",2,12],
+    ["ITM300","傳家寶玉 Heirloom Jade","家族傳承 Family legacy",50,100]
   ];
-  // 每次隨機生成 hiddenValue
-  const seed = defs.map(d => [d[0], d[1], d[2], d[3] + Math.floor(Math.random() * (d[4] - d[3] + 1))]);
-  itemsSheet.getRange(2, 1, seed.length, 4).setValues(seed);
+}
+
+/**
+ * 寫入初始物品資料（300 項）到 Items 工作表
+ * 每次呼叫時 hiddenValue 會在 minValue ~ maxValue 之間重新隨機
+ *
+ * Sheet 欄位：itemId | name | publicHint | hiddenValue | minValue | maxValue
+ * - minValue / maxValue 會一併寫入 Sheet，這樣之後 apiShuffleItems_ 可以
+ *   直接從 Sheet 讀取範圍來重新隨機化，不需依賴 code 中的定義
+ * - 使用者也可以在 Google Sheet 直接修改物品的名稱、提示、min/max
+ */
+function seedItems_(itemsSheet) {
+  const defs = getItemDefs_();
+  // 將 [id, name, hint, min, max] 轉換為 [id, name, hint, randomizedValue, min, max]
+  const seed = defs.map(d => {
+    const hv = d[3] + Math.floor(Math.random() * (d[4] - d[3] + 1));
+    return [d[0], d[1], d[2], hv, d[3], d[4]];
+  });
+  // 批次寫入所有列（比逐列寫入快 100 倍以上）
+  itemsSheet.getRange(2, 1, seed.length, 6).setValues(seed);
+}
+
+
+/**
+ * Host 重新隨機化所有物品的 hiddenValue（真實價值）
+ *
+ * volatility 參數控制隨機範圍有多大：
+ *   "low"  (0.3) — 金額集中在 minValue~maxValue 的中位數附近，波動小（適合新手場）
+ *   "mid"  (0.6) — 適度變化，預設值
+ *   "high" (1.0) — 使用完整 min~max 範圍，波動最大（刺激場）
+ *
+ * 計算方式：以 (min+max)/2 為中心點，向兩側展開 halfRange × volMult 的範圍
+ * 例如 min=10, max=60, volMult=0.6:
+ *   mid=35, halfRange=25×0.6=15 → 隨機範圍 [20, 50]
+ *
+ * 注意：min/max 是從 Sheet 的 minValue/maxValue 欄位讀取的，
+ *       可以在 Google Sheet 直接修改而不需要改 code
+ */
+function apiShuffleItems_(p) {
+  const roomId    = String(p.roomId   || "").trim();
+  const hostToken = String(p.hostToken|| "").trim();
+  const vol       = String(p.volatility || "mid").trim();
+  if (!roomId)    return { ok: false, error: "MISSING_ROOMID" };
+  if (!hostToken) return { ok: false, error: "HOST_ONLY" };
+
+  // 波動倍率對照表：low=30%, mid=60%, high=100% 的 min~max 範圍
+  const volMult = { low: 0.3, mid: 0.6, high: 1.0 }[vol] || 0.6;
+
+  return withLock_(() => {
+    const ss    = db_();
+    const rooms = ss.getSheetByName(TABS.ROOMS);
+    const idx   = findRoomRow_(rooms, roomId);
+    if (idx < 0) return { ok: false, error: "ROOM_NOT_FOUND" };
+    const headers = rooms.getRange(1, 1, 1, rooms.getLastColumn()).getValues()[0];
+    const rim = idxMap_(headers);
+    const r   = getRow_(rooms, idx, rooms.getLastColumn());
+    if (String(r[rim.hostToken]) !== hostToken) return { ok: false, error: "NOT_HOST" };
+
+    // 從 Items Sheet 讀取所有物品並重新隨機化 hiddenValue
+    const items = ss.getSheetByName(TABS.ITEMS);
+    if (!items) return { ok: false, error: "ITEMS_NOT_FOUND" };
+    const iAll = readAll_(items);
+    if (!iAll.rows.length) return { ok: false, error: "NO_ITEMS" };
+    const iim = idxMap_(iAll.headers);
+
+    // 逐項從 Sheet 的 minValue / maxValue 計算新的 hiddenValue
+    iAll.rows.forEach((row, i) => {
+      const mn = Number(row[iim.minValue] || 1);   // 從 Sheet 讀取最小值
+      const mx = Number(row[iim.maxValue] || mn);  // 從 Sheet 讀取最大值
+      if (mx <= mn) return;                        // 無效範圍 → 跳過
+
+      // 以中位數為中心，根據 volatility 計算實際隨機範圍
+      const mid = (mn + mx) / 2;
+      const halfRange = ((mx - mn) / 2) * volMult;
+      const lo = Math.max(1, Math.round(mid - halfRange));  // 確保不低於 1
+      const hi = Math.round(mid + halfRange);
+      const newVal = lo + Math.floor(Math.random() * (hi - lo + 1));
+
+      // 更新該行的 hiddenValue 欄位
+      const pRow = getRow_(items, i + 2, items.getLastColumn());
+      pRow[iim.hiddenValue] = newVal;
+      setRow_(items, i + 2, pRow);
+    });
+
+    SpreadsheetApp.flush();  // 強制寫入 Sheet
+    addEvent_(roomId, "ITEMS_SHUFFLED", "", { volatility: vol });
+    return { ok: true, volatility: vol };
+  });
 }
 
 
@@ -415,16 +701,22 @@ function apiSetup_() {
     ]);
 
     ensureSheet_(ss, TABS.ITEMS, [
-      "itemId", "name", "publicHint", "hiddenValue"
+      "itemId", "name", "publicHint", "hiddenValue", "minValue", "maxValue"
     ]);
 
     ensureSheet_(ss, TABS.CARDS, [
       "roomId", "playerId", "cardId", "name", "desc", "count"
     ]);
 
-    // Seed items（僅首次 — 避免遊戲進行中重新整理頁面時改變物品價值）
+    // Seed items — 每次 Setup 都重新寫入（清除舊資料 + 寫入最新 300 項含 minValue/maxValue）
     const items = ss.getSheetByName(TABS.ITEMS);
-    if (items.getLastRow() < 2) seedItems_(items);
+    // 用 clearContent 而非 deleteRows — deleteRows 在只有 header 時會報錯
+    // 「你無法刪除所有非凍結的列」
+    const lastItemRow = items.getLastRow();
+    if (lastItemRow > 1) {
+      items.getRange(2, 1, lastItemRow - 1, items.getLastColumn()).clearContent();
+    }
+    seedItems_(items);
 
     SpreadsheetApp.flush();
     return { ok: true };
@@ -597,6 +889,83 @@ function apiKickPlayer_(p) {
     touchRoomUpdatedAt_(roomId);
     SpreadsheetApp.flush();
     return { ok: true };
+  });
+}
+
+/**
+ * 玩家離開房間（刪除 Players + Cards 中該玩家的資料）
+ * 若房間內無剩餘玩家，自動清除房間及相關資料
+ */
+function apiLeaveRoom_(p) {
+  const roomId   = String(p.roomId   || "").trim();
+  const playerId = String(p.playerId || "").trim();
+  if (!roomId)   return { ok: false, error: "MISSING_ROOMID" };
+  if (!playerId) return { ok: false, error: "MISSING_PLAYERID" };
+
+  return withLock_(() => {
+    const ss      = db_();
+    const rooms   = ss.getSheetByName(TABS.ROOMS);
+    const players = ss.getSheetByName(TABS.PLAYERS);
+    const cards   = ss.getSheetByName(TABS.CARDS);
+    const events  = ss.getSheetByName(TABS.EVENTS);
+
+    // 刪除該玩家（從下往上刪避免 row shift 問題）
+    const pAll = readAll_(players);
+    const pim  = idxMap_(pAll.headers);
+    for (let i = pAll.rows.length - 1; i >= 0; i--) {
+      const pr = pAll.rows[i];
+      if (String(pr[pim.roomId]) !== roomId) continue;
+      if (String(pr[pim.playerId]) !== playerId) continue;
+      players.deleteRow(i + 2);
+    }
+
+    // 刪除該玩家的卡片
+    if (cards) {
+      const cAll = readAll_(cards);
+      const cim  = idxMap_(cAll.headers);
+      for (let i = cAll.rows.length - 1; i >= 0; i--) {
+        const cr = cAll.rows[i];
+        if (String(cr[cim.roomId]) !== roomId) continue;
+        if (String(cr[cim.playerId]) !== playerId) continue;
+        cards.deleteRow(i + 2);
+      }
+    }
+
+    // 重新計算房間內剩餘玩家數
+    const pAllAfter = readAll_(players);
+    const pimAfter  = idxMap_(pAllAfter.headers);
+    let remaining = 0;
+    pAllAfter.rows.forEach(pr => {
+      if (String(pr[pimAfter.roomId]) === roomId) remaining++;
+    });
+
+    // 若無剩餘玩家 → 清除整個房間資料
+    if (remaining === 0) {
+      // 刪除房間列
+      const roomRowIdx = findRoomRow_(rooms, roomId);
+      if (roomRowIdx > 0) rooms.deleteRow(roomRowIdx);
+
+      // 刪除該房間所有事件（從下往上刪）
+      if (events) {
+        const eAll = readAll_(events);
+        const eim  = idxMap_(eAll.headers);
+        for (let i = eAll.rows.length - 1; i >= 0; i--) {
+          if (String(eAll.rows[i][eim.roomId]) === roomId) events.deleteRow(i + 2);
+        }
+      }
+
+      // 刪除該房間所有卡片（可能還有非該玩家的殘留）
+      if (cards) {
+        const cAll2 = readAll_(cards);
+        const cim2  = idxMap_(cAll2.headers);
+        for (let i = cAll2.rows.length - 1; i >= 0; i--) {
+          if (String(cAll2.rows[i][cim2.roomId]) === roomId) cards.deleteRow(i + 2);
+        }
+      }
+    }
+
+    SpreadsheetApp.flush();
+    return { ok: true, roomCleared: remaining === 0 };
   });
 }
 
@@ -904,33 +1273,50 @@ function tryAutoTransition_(roomId) {
 
 /**
  * 執行本回合結算：找出得標者、套卡牌效果、更新分數/預算、切到 REVEAL
- * 被 apiResolve_（Host 手動）和 tryAutoTransition_（自動）呼叫
+ * 被 apiResolve_（Host 手動）、tryAutoTransition_（自動計時）、apiBid_（全員出價完畢）呼叫
+ *
+ * 流程概述：
+ *   1. 讀取本回合物品的 hiddenValue（真實價值）
+ *   2. 掃描 Events 收集本回合所有 BID 和 CARD_PLAYED 紀錄
+ *   3. 找出出價最高且 ≤ 預算的玩家為得標者（Tie-break：先出價者優先）
+ *   4. 套用卡牌效果：Tax（加稅 +20%）、Shield（負分抵消為 0）
+ *   5. 計算分數 = hiddenValue − actualCost，更新得標者的 budget / score
+ *   6. 將房間狀態切換為 REVEAL（停留 REVEAL_DURATION_MS 毫秒）
+ *   7. 寫入 ROUND_RESOLVED 事件，供前端渲染結果面板
+ *
+ * @param {Spreadsheet} ss    - 資料庫 Spreadsheet 物件
+ * @param {Sheet}       rooms - Rooms 工作表
+ * @param {number}      idx   - 房間在 Rooms 表中的 row index (1-based)
+ * @param {Array}       r     - 房間 row 陣列
+ * @param {Object}      rim   - Rooms header 的 { 欄名: index } map
+ * @param {string}      roomId
  */
 function doResolve_(ss, rooms, idx, r, rim, roomId) {
   const players = ss.getSheetByName(TABS.PLAYERS);
   const events  = ss.getSheetByName(TABS.EVENTS);
   const items   = ss.getSheetByName(TABS.ITEMS);
 
+  // ── Step 1: 取得本回合物品及其真實價值 ──
   const round       = Number(r[rim.round]  || 0);
   const itemId      = String(r[rim.itemId] || "");
   const item        = itemId ? findItem_(items, itemId) : null;
   const hiddenValue = item ? Number(item.hiddenValue || 0) : 0;
 
-  // 讀取玩家資料，建立 playerId → sheetRowIndex 的映射
+  // ── Step 2a: 讀取房間內所有玩家，建立 playerId → Sheet 列號的查找表 ──
   const pAll = readAll_(players);
   const pim  = idxMap_(pAll.headers);
   const pRowById = {};  // playerId → sheet row index (1-based)
   pAll.rows.forEach((pr, i) => {
     if (String(pr[pim.roomId]) !== roomId) return;
-    pRowById[String(pr[pim.playerId])] = i + 2;
+    pRowById[String(pr[pim.playerId])] = i + 2; // +2: 第1列是 header，forEach 從 0 開始
   });
 
-  // 收集本回合的出價和卡牌使用紀錄
+  // ── Step 2b: 掃描事件表，收集本回合的出價 & 使用卡牌紀錄 ──
   const eAll = readAll_(events);
   const eim  = idxMap_(eAll.headers);
-  const lastBid    = {};   // playerId → 最後一次出價金額
-  const bidOrder   = {};   // playerId → 該出價在 events 中的索引（用於 tie-break）
-  const cardPlayed = {};   // playerId → [cardId, ...]
+  const lastBid    = {};   // playerId → 最後一次出價金額（同回合可多次出價，取最後一次）
+  const bidOrder   = {};   // playerId → 該出價在 events 中的索引（越小 = 越早出價，用於 tie-break）
+  const cardPlayed = {};   // playerId → [cardId, ...]（本回合使用的卡牌清單）
 
   eAll.rows.forEach((er, idx) => {
     if (String(er[eim.roomId]) !== roomId) return;
@@ -939,18 +1325,21 @@ function doResolve_(ss, rooms, idx, r, rim, roomId) {
     let payload = {};
     try { payload = JSON.parse(String(er[eim.payloadJson] || "{}")); } catch (_) {}
 
+    // 記錄本回合的出價（每次更新覆蓋上一次，最終 lastBid[pid] 為最後出價）
     if (type === "BID" && Number(payload.round) === round) {
       lastBid[pid]  = Number(payload.bid || 0);
-      bidOrder[pid] = idx;  // 越後面 = 越晚出價
+      bidOrder[pid] = idx;  // 越後面 = 越晚出價（同金額時，越早出價者優先得標）
     }
+    // 記錄本回合的卡牌使用
     if (type === "CARD_PLAYED" && Number(payload.round) === round) {
       if (!cardPlayed[pid]) cardPlayed[pid] = [];
       cardPlayed[pid].push(String(payload.cardId || ""));
     }
   });
 
-  // 找出得標者：出價最高且 ≤ 預算的玩家
-  // Tie-break：同出價時，先出價者（bidOrder 較小）得標
+  // ── Step 3: 找出得標者 ──
+  // 規則：出價最高的玩家得標，但出價不能超過自己的預算
+  // Tie-break：同出價金額時，先出價者（bidOrder 數字較小）優先
   let winnerId  = "";
   let winnerBid = -1;
   let winnerOrder = Infinity;
@@ -958,17 +1347,19 @@ function doResolve_(ss, rooms, idx, r, rim, roomId) {
   Object.keys(lastBid).forEach(pid => {
     const bid = lastBid[pid];
     const rowIdx = pRowById[pid];
-    if (!rowIdx) return;
+    if (!rowIdx) return;                  // 該玩家已不在房間中
     const row    = getRow_(players, rowIdx, players.getLastColumn());
     const budget = Number(row[pim.budget] || 0);
-    if (bid > budget) return;          // 超過預算 → 無效
+    if (bid > budget) return;             // 超過預算 → 出價無效
     const order = bidOrder[pid] || 0;
+    // 出價更高，或同出價但更早出價 → 更新得標候選人
     if (bid > winnerBid || (bid === winnerBid && order < winnerOrder)) {
       winnerBid = bid; winnerId = pid; winnerOrder = order;
     }
   });
 
-  // 卡牌效果：Tax（加稅 +20%）
+  // ── Step 4a: 卡牌效果 — Tax（加稅）──
+  // C2 = Tax 卡：得標者的實際支付金額 = 出價 × 1.2（向上取整）
   let actualCost = winnerBid;
   let taxApplied = false;
   if (winnerId && cardPlayed[winnerId] && cardPlayed[winnerId].includes("C2")) {
@@ -976,8 +1367,8 @@ function doResolve_(ss, rooms, idx, r, rim, roomId) {
     taxApplied = true;
   }
 
-  // 計算分數變化
-  const deltas     = {};
+  // ── Step 5: 計算分數並更新玩家資料 ──
+  const deltas     = {};   // playerId → { delta, shieldApplied, taxApplied }（前端用）
   let winnerName = "";
 
   if (winnerId) {
@@ -987,9 +1378,12 @@ function doResolve_(ss, rooms, idx, r, rim, roomId) {
     const budget = Number(row[pim.budget] || 0);
     const score  = Number(row[pim.score]  || 0);
 
+    // 分數 = 物品真實價值 − 實際支付金額
+    // 正值 = 賺到（買到便宜貨），負值 = 虧損（買貴了）
     let delta = hiddenValue - actualCost;
 
-    // 卡牌效果：Shield（護盾）— 若分數增量為負則抵消為 0
+    // ── Step 4b: 卡牌效果 — Shield（護盾）──
+    // C3 = Shield 卡：若分數增量為負（買貴了），則將虧損抵消為 0
     let shieldApplied = false;
     if (delta < 0 && cardPlayed[winnerId] && cardPlayed[winnerId].includes("C3")) {
       delta = 0;
@@ -998,22 +1392,24 @@ function doResolve_(ss, rooms, idx, r, rim, roomId) {
 
     deltas[winnerId] = { delta, shieldApplied, taxApplied };
 
-    // 更新玩家資料
+    // 更新得標者：預算扣除實際支付，分數加上 delta
     row[pim.budget]    = budget - actualCost;
     row[pim.score]     = score + delta;
     row[pim.updatedAt] = nowMs_();
     setRow_(players, rowIdx, row);
   }
 
-  // 狀態切換：BIDDING → REVEAL
+  // ── Step 6: 切換房間狀態 BIDDING → REVEAL ──
+  // REVEAL 狀態持續 REVEAL_DURATION_MS 毫秒，時間到後由 tryAutoTransition_ 切到 POSTROUND
   const now = nowMs_();
   r[rim.state]         = "REVEAL";
   r[rim.revealUntilTs] = now + REVEAL_DURATION_MS;
-  r[rim.bidDeadlineTs] = "";
+  r[rim.bidDeadlineTs] = "";               // 清除出價截止時間（已結算）
   r[rim.updatedAt]     = now;
   setRow_(rooms, idx, r);
 
-  // 記錄結算事件（前端用來顯示結果面板）
+  // ── Step 7: 記錄 ROUND_RESOLVED 事件 ──
+  // 前端的 syncOnce 會讀取此事件來渲染結果面板（得標者、出價、分數變動等）
   addEvent_(roomId, "ROUND_RESOLVED", "", {
     round, winnerId, winnerName, winnerBid, actualCost,
     hiddenValue, deltas, taxApplied,
@@ -1084,7 +1480,22 @@ function apiUpdateSettings_(p) {
     r[im.updatedAt]      = nowMs_();
     setRow_(rooms, idx, r);
 
+    // 同步更新所有玩家的預算為新的 startingBudget
+    const players = ss.getSheetByName(TABS.PLAYERS);
+    const pAll = readAll_(players);
+    const pim  = idxMap_(pAll.headers);
+    const t = nowMs_();
+    pAll.rows.forEach((pr, i) => {
+      if (String(pr[pim.roomId]) !== roomId) return;
+      const pRowIdx = i + 2;
+      const pRow = getRow_(players, pRowIdx, players.getLastColumn());
+      pRow[pim.budget]    = startingBudget;
+      pRow[pim.updatedAt] = t;
+      setRow_(players, pRowIdx, pRow);
+    });
+
     addEvent_(roomId, "SETTINGS_UPDATED", "", { startingBudget, roundSeconds, maxRounds });
+    SpreadsheetApp.flush();
     return { ok: true };
   });
 }
@@ -1173,9 +1584,60 @@ function apiBid_(p) {
     if (Number(r[rim.round] || 0) !== round)
       return { ok: false, error: "ROUND_MISMATCH" };
 
+    // 預算為 0 的玩家禁止出價
+    const players = ss.getSheetByName(TABS.PLAYERS);
+    const pAll = readAll_(players);
+    const pim  = idxMap_(pAll.headers);
+    for (const pr of pAll.rows) {
+      if (String(pr[pim.roomId]) !== roomId) continue;
+      if (String(pr[pim.playerId]) !== playerId) continue;
+      if (Number(pr[pim.budget] || 0) <= 0)
+        return { ok: false, error: "ZERO_BUDGET" };
+      break;
+    }
+
+    // 記錄出價事件（同回合可多次出價，結算時取最後一次記錄的金額）
     addEvent_(roomId, "BID", playerId, { round, bid });
     touchRoomUpdatedAt_(roomId);
-    return { ok: true };
+
+    // ══ 全員出價自動結算邏輯 ══
+    // 目的：若房間內所有「可出價」玩家都已提交出價，就不必等倒數結束，直接提前結算
+    // 「可出價」= budget > 0 的玩家（預算歸零者已被排除在出價流程外）
+
+    // Step A: 收集房間內所有 budget > 0 的玩家 ID
+    const activePlayers = [];
+    pAll.rows.forEach(pr => {
+      if (String(pr[pim.roomId]) !== roomId) return;
+      if (Number(pr[pim.budget] || 0) <= 0) return;  // 預算歸零 → 只能觀看，不列入
+      activePlayers.push(String(pr[pim.playerId]));
+    });
+
+    // Step B: 掃描本回合所有 BID 事件，建立已出價玩家的 Set
+    const events = ss.getSheetByName(TABS.EVENTS);
+    const eAll = readAll_(events);
+    const eim  = idxMap_(eAll.headers);
+    const biddedSet = new Set();  // 本回合已出價的 playerId 集合
+    eAll.rows.forEach(ev => {
+      if (String(ev[eim.roomId]) !== roomId) return;
+      if (String(ev[eim.type]) !== "BID") return;
+      try {
+        const pl = JSON.parse(ev[eim.payloadJson] || "{}");
+        if (Number(pl.round) === round) biddedSet.add(String(ev[eim.playerId]));
+      } catch (_) {}
+    });
+
+    // Step C: 檢查是否全員都已出價
+    const allBidded = activePlayers.length > 0 && activePlayers.every(pid => biddedSet.has(pid));
+    if (allBidded) {
+      // 全員出價完畢 → 不等倒數計時，立即呼叫 doResolve_ 結算本回合
+      // 先重新讀取 room row（因為可能有其他併發請求修改）
+      const rr = getRow_(rooms, idx, rooms.getLastColumn());
+      if (String(rr[rim.state]) === "BIDDING") {
+        doResolve_(ss, rooms, idx, rr, rim, roomId);
+      }
+    }
+
+    return { ok: true, allBidded };
   });
 }
 
