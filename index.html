@@ -478,48 +478,48 @@
 
   <main>
     <div class="status-bar">
-      <div class="dot" id="statusDot"></div><span id="statusText">初始化中…</span>
+      <div class="dot" id="statusDot"></div><span id="statusText">初始化中… Initializing…</span>
     </div>
 
     <!-- ====== 大廳 ====== -->
     <div id="viewLobby">
       <div class="card">
-        <h3>🏠 大廳</h3>
-        <label>房名 / 同場域代碼</label>
-        <input id="lobbyCode" placeholder="例：PARTY01" autocomplete="off" />
-        <label>你的名字</label>
-        <input id="playerName" placeholder="例：小明" autocomplete="off" />
+        <h3>🏠 大廳 Lobby</h3>
+        <label>房名 / 同場域代碼 Room / Lobby Code</label>
+        <input id="lobbyCode" placeholder="例 e.g. PARTY01" autocomplete="off" />
+        <label>你的名字 Your Name</label>
+        <input id="playerName" placeholder="例 e.g. Amy" autocomplete="off" />
         <div class="row" style="margin-top:12px">
-          <button id="btnCreateRoom">🎉 開新房間</button>
-          <button id="btnRefresh" class="secondary">🔄 刷新列表</button>
+          <button id="btnCreateRoom">🎉 開新房間 Create</button>
+          <button id="btnRefresh" class="secondary">🔄 刷新列表 Refresh</button>
         </div>
-        <div class="row" style="margin-top:8px">
-          <button id="btnSetup" class="small secondary">初始化DB</button>
-          <button id="btnDebug" class="small secondary">測試API</button>
+        <div class="row hidden" style="margin-top:8px" id="adminBtnsRow">
+          <button id="btnSetup" class="small secondary">初始化DB Init DB</button>
+          <button id="btnDebug" class="small secondary">測試API Test API</button>
         </div>
         <div id="lobbyError" class="error-box hidden"></div>
-        <label style="margin-top:14px">用 roomId 直接加入</label>
+        <label style="margin-top:14px">用 roomId 直接加入 Join by Room ID</label>
         <div class="row">
-          <input id="joinRoomId" placeholder="例：1234" style="flex:1" autocomplete="off" />
-          <button id="btnJoinRoom" class="secondary">加入</button>
+          <input id="joinRoomId" placeholder="例 e.g. 1234" style="flex:1" autocomplete="off" />
+          <button id="btnJoinRoom" class="secondary">加入 Join</button>
         </div>
       </div>
       <div class="card">
-        <h3>📋 房間列表</h3>
+        <h3>📋 房間列表 Room List</h3>
         <table>
           <thead>
             <tr>
-              <th>房號</th>
-              <th>房名</th>
-              <th>狀態</th>
-              <th>人數</th>
-              <th>回合</th>
+              <th>房號 ID</th>
+              <th>房名 Name</th>
+              <th>狀態 Status</th>
+              <th>人數 Players</th>
+              <th>回合 Round</th>
               <th></th>
             </tr>
           </thead>
           <tbody id="roomsTbody">
             <tr>
-              <td colspan="6" style="font-size:12px;color:var(--text-dim)">載入中…</td>
+              <td colspan="6" style="font-size:12px;color:var(--text-dim)">載入中… Loading…</td>
             </tr>
           </tbody>
         </table>
@@ -532,15 +532,15 @@
       <div class="card" style="padding:10px 14px">
         <div class="row" style="justify-content:space-between">
           <div class="row" style="gap:6px">
-            <span class="pill">房間</span>
+            <span class="pill">房間 Room</span>
             <b id="roomIdText" style="font-family:monospace;font-size:16px"></b>
             <span class="pill" id="roomStatePill">LOBBY</span>
-            <span style="font-size:12px;color:var(--text-dim)">回合 <b id="roomRoundText">0</b>/<b
+            <span style="font-size:12px;color:var(--text-dim)">回合 Round <b id="roomRoundText">0</b>/<b
                 id="roomMaxText">8</b></span>
           </div>
           <div class="row" style="gap:6px">
-            <button id="btnResetDb" class="danger small hidden">重置DB</button>
-            <button id="btnLeave" class="small secondary">離開</button>
+            <button id="btnResetDb" class="danger small hidden">重置DB Reset</button>
+            <button id="btnLeave" class="small secondary">離開 Leave</button>
           </div>
         </div>
         <div class="row" style="margin-top:6px;gap:12px">
@@ -553,46 +553,130 @@
       <!-- LOBBY 狀態 -->
       <div id="stateLobby">
         <div class="card">
-          <h3>👥 玩家列表</h3>
+          <h3>👥 玩家列表 Players</h3>
           <div id="playerListLobby">-</div>
         </div>
+        <div class="card">
+          <details id="rulesDetails">
+            <summary
+              style="cursor:pointer;font-weight:900;font-size:16px;list-style:none;display:flex;align-items:center;gap:8px">
+              <span id="rulesArrow">▶</span> 📖 遊戲說明 & 卡牌介紹 Rules & Cards
+            </summary>
+            <div style="margin-top:12px;font-size:13px;line-height:1.8;color:var(--text-dim)">
+              <div style="font-weight:700;color:var(--gold-bright);font-size:14px;margin-bottom:6px">🎯 遊戲目標 Objective
+              </div>
+              <p>在有限的預算內，透過<b style="color:var(--gold)">盲拍競標</b>各種神秘物品來賺取最高分數！<br><span
+                  style="font-size:12px;opacity:.7">Score the most points by blind-bidding on mysterious items within a
+                  limited budget!</span></p>
+
+              <div style="font-weight:700;color:var(--gold-bright);font-size:14px;margin:12px 0 6px">📜 遊戲流程 How to Play
+              </div>
+              <div style="padding-left:8px">
+                <div style="margin:4px 0"><b style="color:var(--gold)">1.</b> 每回合隨機出現一件物品，你只能看到名稱和提示<br><span
+                    style="font-size:12px;opacity:.7">A random item appears each round — you only see its name &
+                    hint</span></div>
+                <div style="margin:4px 0"><b style="color:var(--gold)">2.</b> 在倒數時間內輸入出價（盲拍＝看不到別人出價）<br><span
+                    style="font-size:12px;opacity:.7">Place your bid before time runs out (blind = you can't see others'
+                    bids)</span></div>
+                <div style="margin:4px 0"><b style="color:var(--gold)">3.</b> 時間到後揭曉真實價值，出價最高且≤預算者得標<br><span
+                    style="font-size:12px;opacity:.7">True value is revealed — highest bid within budget wins</span>
+                </div>
+                <div style="margin:4px 0"><b style="color:var(--gold)">4.</b> 得標者分數 ＝ <b style="color:#a8ffb0">真實價值 −
+                    出價</b>（買貴會扣分！）<br><span style="font-size:12px;opacity:.7">Winner's score = True Value − Bid
+                    (overpaying = negative!)</span></div>
+                <div style="margin:4px 0"><b style="color:var(--gold)">5.</b> 預算會扣除出價金額，歸零後只能觀戰<br><span
+                    style="font-size:12px;opacity:.7">Your budget decreases by your bid; zero budget = spectator
+                    mode</span></div>
+              </div>
+
+              <div style="font-weight:700;color:var(--gold-bright);font-size:14px;margin:12px 0 6px">🃏 卡牌介紹 Cards</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="background:#d4a02018;border:1px solid #d4a02044;border-radius:10px;padding:10px 12px">
+                  <div style="font-weight:700;color:var(--gold)">🔮 偷看 Peek <span style="font-size:11px;opacity:.7">×
+                      1</span></div>
+                  <div>窺探物品真實價值的大約區間（±5）<br><span style="font-size:12px;opacity:.7">Reveals the item's approximate value
+                      range (±5)</span></div>
+                </div>
+                <div style="background:#d4a02018;border:1px solid #d4a02044;border-radius:10px;padding:10px 12px">
+                  <div style="font-weight:700;color:var(--gold)">💸 加稅 Tax <span style="font-size:11px;opacity:.7">×
+                      1</span></div>
+                  <div>若得標需額外支付出價的 20%（心理戰用）<br><span style="font-size:12px;opacity:.7">If you win, pay 20% extra (use
+                      as a bluff!)</span></div>
+                </div>
+                <div style="background:#d4a02018;border:1px solid #d4a02044;border-radius:10px;padding:10px 12px">
+                  <div style="font-weight:700;color:var(--gold)">🛡️ 護盾 Shield <span style="font-size:11px;opacity:.7">×
+                      1</span></div>
+                  <div>得標且分數為負時，抵消為 0<br><span style="font-size:12px;opacity:.7">Negates negative score if you
+                      overpay</span></div>
+                </div>
+              </div>
+
+              <div style="font-weight:700;color:var(--gold-bright);font-size:14px;margin:12px 0 6px">💡 小技巧 Tips</div>
+              <div style="padding-left:8px">
+                <div style="margin:4px 0">• 不一定要每回合都出價，保留預算也是策略！<br><span style="font-size:12px;opacity:.7">Skipping
+                    rounds to save budget is a valid strategy!</span></div>
+                <div style="margin:4px 0">• 出價 <b>0</b> 等於棄權 / Bidding <b>0</b> = pass (no cost)</div>
+                <div style="margin:4px 0">• 同出價時先出價者優先 / Ties: earlier bid wins</div>
+                <div style="margin:4px 0">• 善用卡牌扭轉局勢！ Use cards wisely!</div>
+              </div>
+            </div>
+          </details>
+        </div>
         <div class="card hidden" id="hostSettingsCard">
-          <h3>⚙️ 房主設定</h3>
+          <h3>⚙️ 房主設定 Host Settings</h3>
           <div class="settings-grid">
-            <div><label>回合數</label><input id="setMaxRounds" type="number" min="1" max="20" value="8" /></div>
-            <div><label>每回合秒數</label><input id="setRoundSeconds" type="number" min="5" max="120" value="25" /></div>
-            <div><label>起始預算</label><input id="setStartBudget" type="number" min="10" max="9999" value="100" /></div>
+            <div><label>回合數 Rounds</label><input id="setMaxRounds" type="number" min="1" max="20" value="8" /></div>
+            <div><label>每回合秒數 Seconds</label><input id="setRoundSeconds" type="number" min="5" max="120" value="25" />
+            </div>
+            <div><label>起始預算 Budget</label><input id="setStartBudget" type="number" min="10" max="9999" value="100" />
+            </div>
           </div>
-          <div class="row" style="margin-top:10px"><button id="btnSaveSettings" class="small secondary">💾 儲存設定</button>
+          <div class="row" style="margin-top:10px"><button id="btnSaveSettings" class="small secondary">💾 儲存設定
+              Save</button>
           </div>
+          <hr style="border-color:var(--border);margin:12px 0">
+          <h4 style="margin:0 0 8px">🎲 物品金額隨機化 Shuffle Item Prices</h4>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+            <span style="font-size:12px;color:var(--text-dim)">變化程度 Volatility:</span>
+            <label style="font-size:13px;cursor:pointer"><input type="radio" name="volatility" value="low"> 低
+              Low</label>
+            <label style="font-size:13px;cursor:pointer"><input type="radio" name="volatility" value="mid" checked> 中
+              Mid</label>
+            <label style="font-size:13px;cursor:pointer"><input type="radio" name="volatility" value="high"> 高
+              High</label>
+          </div>
+          <button id="btnShuffleItems" class="small secondary" style="width:100%">🎲 隨機跳動金額 Shuffle Prices</button>
+          <div id="shuffleStatus" style="font-size:11px;color:var(--gold-light);margin-top:4px;text-align:center"
+            class="hidden"></div>
         </div>
         <div style="text-align:center;margin:12px 0"><button id="btnStartRound" class="hidden"
-            style="font-size:18px;padding:14px 32px">🚀 開始回合</button></div>
+            style="font-size:18px;padding:14px 32px">🚀 開始回合 Start Round</button></div>
       </div>
 
       <!-- BIDDING 狀態 -->
       <div id="stateBidding" class="hidden">
         <div class="card" style="text-align:center">
-          <div style="font-size:13px;color:var(--text-dim)">本回合物品</div>
+          <div style="font-size:13px;color:var(--text-dim)">本回合物品 Current Item</div>
           <div style="font-size:22px;font-weight:900;margin:4px 0" id="bidItemName">-</div>
           <div style="font-size:14px;color:var(--gold-light)" id="bidItemHint">-</div>
           <div id="peekHintBox" class="peek-hint hidden"></div>
           <div class="countdown" id="bidCountdown">--</div>
-          <div style="font-size:11px;color:var(--text-dim)">剩餘秒數</div>
+          <div style="font-size:11px;color:var(--text-dim)">剩餘秒數 Seconds Left</div>
         </div>
         <div class="card">
-          <h3>💵 出價</h3>
-          <div class="row"><input id="bidInput" type="number" min="0" step="1" placeholder="輸入金額"
-              style="flex:1" /><button id="btnBid">送出出價</button></div>
+          <h3>💵 出價 Place Bid</h3>
+          <div class="row"><input id="bidInput" type="number" min="0" step="1" placeholder="輸入金額 Enter amount"
+              style="flex:1" /><button id="btnBid">送出出價 Bid</button></div>
           <div id="bidConfirmBox" class="bid-confirm hidden"></div>
           <div style="margin-top:10px">
-            <div style="font-size:12px;color:var(--text-dim);margin-bottom:6px">🃏 手牌</div>
+            <div style="font-size:12px;color:var(--text-dim);margin-bottom:6px">🃏 手牌 Cards</div>
             <div class="card-hand" id="cardHandBidding"></div>
           </div>
-          <div style="margin-top:10px"><button id="btnResolve" class="danger small hidden">⚡ 立即結算（Host）</button></div>
+          <div style="margin-top:10px"><button id="btnResolve" class="danger small hidden">⚡ 立即結算 Resolve
+              (Host)</button></div>
         </div>
         <div class="card">
-          <h3>👥 玩家</h3>
+          <h3>👥 玩家 Players</h3>
           <div id="playerListBidding" style="font-size:12px">-</div>
         </div>
       </div>
@@ -601,43 +685,43 @@
       <div id="stateReveal" class="hidden">
         <div class="card">
           <div class="result-panel">
-            <div style="font-size:14px;color:var(--text-dim)">🎊 本回合結果</div>
+            <div style="font-size:14px;color:var(--text-dim)">🎊 本回合結果 Round Result</div>
             <div id="revealItemName" style="font-size:18px;font-weight:700;margin:6px 0">-</div>
-            <div style="font-size:13px;color:var(--text-dim)">真實價值：<b id="revealHiddenValue"
+            <div style="font-size:13px;color:var(--text-dim)">真實價值 True Value：<b id="revealHiddenValue"
                 style="color:var(--gold-bright)">?</b></div>
             <div style="margin:12px 0">
-              <div style="font-size:13px;color:var(--text-dim)">🏆 得標者</div>
+              <div style="font-size:13px;color:var(--text-dim)">🏆 得標者 Winner</div>
               <div class="winner-name" id="revealWinner">-</div>
               <div class="detail" id="revealDetail">-</div>
             </div>
             <div id="revealDeltas" style="font-size:13px"></div>
           </div>
           <div class="countdown small" id="revealCountdown">--</div>
-          <div style="text-align:center;font-size:11px;color:var(--text-dim)">自動進入排行榜…</div>
+          <div style="text-align:center;font-size:11px;color:var(--text-dim)">自動進入排行榜… Entering leaderboard…</div>
         </div>
       </div>
 
       <!-- POSTROUND 狀態 -->
       <div id="statePostround" class="hidden">
         <div class="card">
-          <h3>🏆 排行榜</h3>
+          <h3>🏆 排行榜 Leaderboard</h3>
           <div class="leaderboard" id="leaderboardBox">-</div>
         </div>
         <div style="text-align:center;margin:12px 0">
-          <button id="btnNextRound" class="hidden" style="font-size:18px;padding:14px 32px">▶️ 下一回合</button>
+          <button id="btnNextRound" class="hidden" style="font-size:18px;padding:14px 32px">▶️ 下一回合 Next Round</button>
           <div class="countdown small" id="postCountdown">--</div>
-          <div style="font-size:11px;color:var(--text-dim)" id="postAutoText">自動進入下一回合…</div>
+          <div style="font-size:11px;color:var(--text-dim)" id="postAutoText">自動進入下一回合… Next round auto-starting…</div>
         </div>
       </div>
 
       <!-- ENDED 狀態 -->
       <div id="stateEnded" class="hidden">
         <div class="card">
-          <div class="game-over">🎆 遊戲結束 🎆</div>
+          <div class="game-over">🎆 遊戲結束 Game Over 🎆</div>
           <div class="leaderboard" id="leaderboardEndBox">-</div>
           <div style="text-align:center;margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-            <button id="btnRestart" class="hidden">🔄 重新開始（Host）</button>
-            <button id="btnBackLobby" class="secondary">🏠 返回大廳</button>
+            <button id="btnRestart" class="hidden">🔄 重新開始 Restart (Host)</button>
+            <button id="btnBackLobby" class="secondary">🏠 返回大廳 Back to Lobby</button>
           </div>
         </div>
       </div>
@@ -681,15 +765,21 @@
       'btnLeave', 'btnResetDb',
       'stateLobby', 'stateBidding', 'stateReveal', 'statePostround', 'stateEnded',
       'playerListLobby', 'hostSettingsCard', 'setMaxRounds', 'setRoundSeconds', 'setStartBudget',
-      'btnSaveSettings', 'btnStartRound',
+      'btnSaveSettings', 'btnStartRound', 'btnShuffleItems', 'shuffleStatus',
       'bidItemName', 'bidItemHint', 'peekHintBox', 'bidCountdown', 'bidInput', 'btnBid', 'bidConfirmBox',
       'cardHandBidding', 'btnResolve', 'playerListBidding',
       'revealItemName', 'revealHiddenValue', 'revealWinner', 'revealDetail', 'revealDeltas', 'revealCountdown',
       'leaderboardBox', 'btnNextRound', 'postCountdown', 'postAutoText',
       'leaderboardEndBox', 'btnRestart', 'btnBackLobby',
-      'roomError', 'debugToggle', 'debugLog'
+      'roomError', 'debugToggle', 'debugLog', 'adminBtnsRow'
     ].forEach(id => DOM[id] = $(id));
     DOM.apiUrlText.textContent = API_URL.length > 60 ? "…" + API_URL.slice(-50) : API_URL;
+
+    // 只有名稱為 admin 時才顯示 初始化DB / 測試API 按鈕
+    DOM.playerName.addEventListener('input', () => {
+      const isAdmin = DOM.playerName.value.trim().toLowerCase() === 'admin';
+      DOM.adminBtnsRow.classList.toggle('hidden', !isAdmin);
+    });
 
     /* ══════════════════════════════════════════════════════════════════════════
      * 應用狀態
@@ -736,24 +826,42 @@
 
     /* ══════════════════════════════════════════════════════════════════════════
      * 網路層（fetch + JSONP fallback）
+     * 
+     * 策略：優先使用 fetch（POST/GET），失敗時自動降級為 JSONP
+     * JSONP 是為了相容 Apps Script 可能不回傳 CORS header 的情況
      * ════════════════════════════════════════════════════════════════════════ */
+
+    /** 產生唯一的 JSONP callback 函式名，避免多請求衝突 */
     function jsonpCb() { return "__BAP_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8); }
 
+    /**
+     * JSONP GET 請求
+     * 原理：動態插入 <script> 標籤，後端回傳 callbackName({...}); 格式的 JS
+     * 瀏覽器執行回調函式，將資料傳回 Promise
+     */
     function apiGETJsonp(action, params = {}) {
       return new Promise((res, rej) => {
         const u = new URL(API_URL); const cb = jsonpCb();
         u.searchParams.set("action", action); u.searchParams.set("callback", cb);
-        u.searchParams.set("_t", String(Date.now()));
+        u.searchParams.set("_t", String(Date.now()));  // 防快取
         for (const [k, v] of Object.entries(params)) { if (v == null || v === "") continue; u.searchParams.set(k, String(v)); }
         const sc = document.createElement("script"); let done = false;
         const to = setTimeout(() => fin(new Error("JSONP timeout")), 15000);
+        // 統一完成處理：清除 timeout、移除 script 標籤、刪除全域回調
         function fin(e, d) { if (done) return; done = true; clearTimeout(to); if (sc.parentNode) sc.remove(); try { delete window[cb]; } catch (_) { } e ? rej(e) : res(d); }
         window[cb] = d => fin(null, d); sc.onerror = () => fin(new Error("JSONP failed")); sc.src = u.toString(); document.head.appendChild(sc);
       });
     }
 
+    /** 判斷是否為網路錯誤（用於決定是否切換到 JSONP） */
     function isNetErr(e) { const m = String(e && e.message || e || "").toLowerCase(); return m.includes("network") || m.includes("failed to fetch") || m.includes("load failed"); }
 
+    /**
+     * GET 請求（自動降級）
+     * 1. 先嘗試 fetch + credentials（支援 Cookie 認證）
+     * 2. 若回應是 HTML（通常是 Google 登入頁）→ 拋錯
+     * 3. 若 fetch 失敗（CORS/網路問題）→ 自動切到 JSONP
+     */
     async function apiGET(action, params = {}) {
       if (S.preferJsonp) return apiGETJsonp(action, params);
       const u = new URL(API_URL); u.searchParams.set("action", action);
@@ -770,6 +878,10 @@
       }
     }
 
+    /**
+     * POST 請求（自動降級為 GET）
+     * Apps Script 的 POST 有時會被 redirect 成 HTML → 此時降級為 GET
+     */
     async function apiPOST(action, payload = {}) {
       try {
         const r = await fetch(API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ action, ...payload }) });
@@ -796,14 +908,14 @@
     /* ══════════════════════════════════════════════════════════════════════════
      * 大廳操作
      * ════════════════════════════════════════════════════════════════════════ */
-    const stateLabel = { LOBBY: '🟢 等待中', BIDDING: '🔴 出價中', REVEAL: '🟡 揭露中', POSTROUND: '📊 排行', ENDED: '🏁 結束' };
+    const stateLabel = { LOBBY: '🟢 等待中 Waiting', BIDDING: '🔴 出價中 Bidding', REVEAL: '🟡 揭露中 Reveal', POSTROUND: '📊 排行 Rank', ENDED: '🏁 結束 Ended' };
 
     function renderRooms(rooms) {
       const tb = DOM.roomsTbody; tb.innerHTML = "";
-      if (!rooms.length) { tb.innerHTML = '<tr><td colspan="6" style="font-size:12px;color:var(--text-dim)">沒有活躍房間</td></tr>'; return; }
+      if (!rooms.length) { tb.innerHTML = '<tr><td colspan="6" style="font-size:12px;color:var(--text-dim)">沒有活躍房間 No active rooms</td></tr>'; return; }
       rooms.forEach(r => {
         const tr = document.createElement("tr");
-        tr.innerHTML = `<td style="font-family:monospace;font-weight:700">${r.roomId}</td><td style="font-size:12px">${esc(r.lobbyCode || '')}</td><td style="font-size:12px">${stateLabel[r.state] || r.state}</td><td>${r.playerCount || 0}</td><td>${r.round || 0}/${r.maxRounds || 0}</td><td><button class="small secondary">加入</button></td>`;
+        tr.innerHTML = `<td style="font-family:monospace;font-weight:700">${r.roomId}</td><td style="font-size:12px">${esc(r.lobbyCode || '')}</td><td style="font-size:12px">${stateLabel[r.state] || r.state}</td><td>${r.playerCount || 0}</td><td>${r.round || 0}/${r.maxRounds || 0}</td><td><button class="small secondary">加入 Join</button></td>`;
         tr.querySelector("button").onclick = () => joinRoomById(r.roomId);
         tb.appendChild(tr);
       });
@@ -819,16 +931,16 @@
       const lc = normLC(DOM.lobbyCode.value);  // 可能為空字串
       setLobbyBusy(true);
       try {
-        setStatus(true, '載入房間列表…');
+        setStatus(true, '載入房間列表 Loading rooms…');
         const params = {};
         if (lc) params.lobbyCode = lc;  // 有填才傳，空值則列出全部
         const out = await apiGET("listLobbyRooms", params);
         if (!out.ok) throw new Error(out.error || "listLobbyRooms failed");
         renderRooms(out.rooms || []);
-        setStatus(true, '大廳就緒（' + (out.rooms || []).length + ' 間房）');
+        setStatus(true, '大廳就緒 Lobby ready（' + (out.rooms || []).length + ' 間房 rooms）');
       } catch (err) {
         showErr('lobbyError', String(err.message || err));
-        setStatus(false, '刷新失敗');
+        setStatus(false, '刷新失敗 Refresh failed');
         logMsg("REFRESH_ERR: " + String(err.message || err));
       } finally { setLobbyBusy(false); }
     }
@@ -836,10 +948,10 @@
     /** 建立新房間 + 自動加入 */
     async function createRoom() {
       showErr('lobbyError', '');
-      const lc = normLC(must(DOM.lobbyCode.value, '房名'));
-      if (!lc) throw new Error("房名至少 2 個字");
-      const name = must(DOM.playerName.value, '你的名字').slice(0, 18);
-      setStatus(true, '建立房間…');
+      const lc = normLC(must(DOM.lobbyCode.value, '房名 Room Name'));
+      if (!lc) throw new Error("房名至少 2 個字 Room name needs at least 2 chars");
+      const name = must(DOM.playerName.value, '你的名字 Your Name').slice(0, 18);
+      setStatus(true, '建立房間 Creating room…');
       const cr = await apiPOST("createRoom", { lobbyCode: lc });
       if (!cr.ok) throw new Error(cr.error || "createRoom failed");
       const jr = await apiPOST("joinRoom", { roomId: cr.roomId, name, hostToken: cr.hostToken || "" });
@@ -851,9 +963,9 @@
     /** 以 roomId 加入房間 */
     async function joinRoomById(roomId) {
       showErr('lobbyError', '');
-      const name = must(DOM.playerName.value, '你的名字').slice(0, 18);
+      const name = must(DOM.playerName.value, '你的名字 Your Name').slice(0, 18);
       roomId = must(roomId, 'roomId').trim();
-      setStatus(true, '加入房間…');
+      setStatus(true, '加入房間 Joining room…');
       const jr = await apiPOST("joinRoom", { roomId, name });
       if (!jr.ok) throw new Error(jr.error || "joinRoom failed");
       S.roomId = roomId; S.hostToken = ""; S.playerId = jr.playerId || ""; S.name = name; S.sinceEventId = 0;
@@ -888,19 +1000,19 @@
      * ════════════════════════════════════════════════════════════════════════ */
     function renderPlayerList(id, players, amHost) {
       const el = DOM[id]; if (!el) return;
-      if (!players || !players.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text-dim)">尚無玩家</div>'; return; }
+      if (!players || !players.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text-dim)">尚無玩家 No players yet</div>'; return; }
       el.innerHTML = players.map(p => {
         const isSelf = p.playerId === S.playerId;
         const kickBtn = (amHost && !p.isHost && !isSelf)
-          ? ` <button class="kick-btn" data-pid="${p.playerId}" style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 4px" title="踢除玩家">❌</button>`
+          ? ` <button class="kick-btn" data-pid="${p.playerId}" style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 4px" title="踢除玩家 Kick">❌</button>`
           : '';
-        return `<div class="player-row"><span class="p-name">${p.isHost ? '👑 ' : ''}${esc(p.name)}${isSelf ? ' (你)' : ''}${kickBtn}</span><span class="p-stat">💰 ${p.budget}</span><span class="p-stat">⭐ ${p.score}</span></div>`;
+        return `<div class="player-row"><span class="p-name">${p.isHost ? '👑 ' : ''}${esc(p.name)}${isSelf ? ' (你 You)' : ''}${kickBtn}</span><span class="p-stat">💰 ${p.budget}</span><span class="p-stat">⭐ ${p.score}</span></div>`;
       }).join('');
       // 綁定踢除按鈕
       el.querySelectorAll('.kick-btn').forEach(btn => {
         btn.onclick = async () => {
           const tid = btn.dataset.pid;
-          if (!confirm('確定要踢除此玩家嗎？')) return;
+          if (!confirm('確定要踢除此玩家嗎？ Kick this player?')) return;
           try {
             const o = await apiPOST("kickPlayer", { roomId: S.roomId, hostToken: S.hostToken, playerId: S.playerId, targetPlayerId: tid });
             if (!o.ok) throw new Error(o.error || "kickPlayer failed");
@@ -914,12 +1026,12 @@
       const el = DOM[id]; if (!el) return;
       const sorted = [...players].sort((a, b) => b.score - a.score);
       const medals = ['🥇', '🥈', '🥉'];
-      el.innerHTML = sorted.map((p, i) => `<div class="rank"><span class="rank-num">${medals[i] || (i + 1)}</span><span class="rank-name">${p.isHost ? '👑 ' : ''}${esc(p.name)}${p.playerId === S.playerId ? ' (你)' : ''}</span><span><span class="rank-score">⭐ ${p.score}</span> <span class="rank-budget">💰 ${p.budget}</span></span></div>`).join('');
+      el.innerHTML = sorted.map((p, i) => `<div class="rank"><span class="rank-num">${medals[i] || (i + 1)}</span><span class="rank-name">${p.isHost ? '👑 ' : ''}${esc(p.name)}${p.playerId === S.playerId ? ' (你 You)' : ''}</span><span><span class="rank-score">⭐ ${p.score}</span> <span class="rank-budget">💰 ${p.budget}</span></span></div>`).join('');
     }
 
     function renderCardHand(id, cards, round, state) {
       const el = DOM[id]; if (!el) return;
-      if (!cards || !cards.length) { el.innerHTML = '<span style="font-size:12px;color:var(--text-dim)">無手牌</span>'; return; }
+      if (!cards || !cards.length) { el.innerHTML = '<span style="font-size:12px;color:var(--text-dim)">無手牌 No cards</span>'; return; }
       el.innerHTML = cards.map(c => {
         const ok = c.count > 0 && state === 'BIDDING';
         return `<div class="card-item${ok ? '' : ' used'}" data-card="${c.cardId}" data-round="${round}"${ok ? '' : ' style="pointer-events:none"'}><div>${esc(c.name)}</div><div class="card-count">x${c.count}</div></div>`;
@@ -948,18 +1060,31 @@
       })();
     }
 
-    /** 單次同步：呼叫後端 sync API，更新 UI */
+    /**
+     * 單次同步：呼叫後端 sync API，根據回傳資料更新整個 UI
+     * 此函式每 2 秒由 startSync 的 setInterval 觸發一次
+     *
+     * 流程：
+     *   1. 呼叫 sync API → 取得房間狀態、玩家列表、手牌、事件增量、結算結果
+     *   2. 比對 hash → 若無變化則跳過重繪（節省 DOM 操作）
+     *   3. 更新房間 header（狀態標籤、回合數、預算、分數）
+     *   4. 偵測被踢 → 自動跳回大廳
+     *   5. 根據 state 切換對應面板（LOBBY/BIDDING/REVEAL/POSTROUND/ENDED）
+     *   6. 更新事件增量的 sinceEventId（下次只取新事件）
+     */
     async function syncOnce() {
-      if (S.syncing) return; S.syncing = true;
+      if (S.syncing) return; S.syncing = true;  // single-flight：防止多個 sync 同時進行
       try {
+        // ── 1. 呼叫後端 sync API ──
         const out = await apiGET("sync", { roomId: S.roomId, sinceEventId: S.sinceEventId, playerId: S.playerId, hostToken: S.hostToken });
         if (!out.ok) throw new Error(out.error || "sync failed");
         const room = out.room, players = out.players || [], myCards = out.myCards || [], rr = out.resolveResult, peek = out.peekHint, myBid = out.myBid;
 
-        // 跳過無變化的重繪（用 hash 比對）
-        const hash = JSON.stringify({ s: room.state, r: room.round, bd: room.bidDeadlineTs, rv: room.revealUntilTs, pt: room.postUntilTs, win: rr ? rr.winnerId : '', mb: myBid, pl: players.map(p => p.playerId + p.budget + p.score).join(',') });
+        // ── 2. Hash 比對：跳過無變化的重繪（避免不必要的 DOM 操作） ──
+        const hash = JSON.stringify({ s: room.state, r: room.round, mr: room.maxRounds, rs: room.roundSeconds, sb: room.startingBudget, bd: room.bidDeadlineTs, rv: room.revealUntilTs, pt: room.postUntilTs, win: rr ? rr.winnerId : '', mb: myBid, pl: players.map(p => p.playerId + p.budget + p.score).join(',') });
         const evts = out.events || [];
         if (hash === S.lastRenderHash) {
+          // 即使跳過重繪，仍需更新 sinceEventId
           if (evts.length) { const mx = Math.max(...evts.map(e => e.eventId || 0)); if (mx > S.sinceEventId) S.sinceEventId = mx; }
           return;
         }
@@ -975,8 +1100,8 @@
         if (!me && S.playerId) {
           showLobby();
           S.roomId = ""; S.playerId = ""; S.hostToken = ""; S.sinceEventId = 0; S.lastRenderHash = "";
-          setStatus(false, '你已被踢出房間');
-          alert('你已被房主踢出房間');
+          setStatus(false, '你已被踢出房間 You have been kicked');
+          alert('你已被房主踢出房間 You have been kicked by the host');
           setTimeout(refreshLobby, 300);
           return;
         }
@@ -1000,76 +1125,113 @@
           }
         }
 
-        // ── BIDDING ──
+        // ── BIDDING 狀態 ──
+        // 顯示當前物品、倒數計時、出價輸入框、手牌、玩家列表
         if (room.state === "BIDDING") {
+          // 顯示物品名稱和公開提示（hiddenValue 在此階段不公開）
           if (room.item) { DOM.bidItemName.textContent = room.item.name || "-"; DOM.bidItemHint.textContent = room.item.publicHint || ""; }
-          if (peek) { DOM.peekHintBox.classList.remove('hidden'); DOM.peekHintBox.textContent = `🔮 偷看提示：真實價值在 ${peek.min} ~ ${peek.max} 之間`; } else { DOM.peekHintBox.classList.add('hidden'); }
+          // Peek 卡牌效果：若玩家在本回合使用了 Peek，後端會回傳 peekHint（±5 區間）
+          if (peek) { DOM.peekHintBox.classList.remove('hidden'); DOM.peekHintBox.textContent = `🔮 偷看提示 Peek: 真實價值 True value 在 ${peek.min} ~ ${peek.max} 之間`; } else { DOM.peekHintBox.classList.add('hidden'); }
+          // 啟動出價倒數計時（只在首次進入 BIDDING 時啟動，避免重複）
           if (room.bidDeadlineTs > 0 && !S.countdownInterval) startCountdown('bidCountdown', room.bidDeadlineTs);
-          if (myBid != null) { DOM.bidConfirmBox.classList.remove('hidden'); DOM.bidConfirmBox.textContent = `✅ 你已出價：${myBid}`; } else { DOM.bidConfirmBox.classList.add('hidden'); }
-          renderCardHand('cardHandBidding', myCards, room.round, room.state);
+          // 預算歸零的玩家 → 禁止出價，只能觀看
+          const myBudget = me ? me.budget : 0;
+          const isBroke = myBudget <= 0;
+          DOM.bidInput.disabled = isBroke;
+          DOM.btnBid.disabled = isBroke;
+          if (isBroke) {
+            // 預算歸零狀態：紅色背景提示「觀戰模式」
+            DOM.bidConfirmBox.classList.remove('hidden');
+            DOM.bidConfirmBox.textContent = '💸 預算已歸零，無法出價 Budget is zero, spectating only';
+            DOM.bidConfirmBox.style.background = '#6b1a1a33';
+            DOM.bidConfirmBox.style.borderColor = '#ff434344';
+            DOM.bidConfirmBox.style.color = '#ffaaaa';
+          } else {
+            // 正常狀態：顯示已出價金額或隱藏確認框
+            DOM.bidConfirmBox.style.background = '';
+            DOM.bidConfirmBox.style.borderColor = '';
+            DOM.bidConfirmBox.style.color = '';
+            if (myBid != null) { DOM.bidConfirmBox.classList.remove('hidden'); DOM.bidConfirmBox.textContent = `✅ 你已出價 Bid placed：${myBid}`; } else { DOM.bidConfirmBox.classList.add('hidden'); }
+          }
+          // 渲染手牌（預算歸零時禁用卡牌按鈕）
+          renderCardHand('cardHandBidding', myCards, room.round, isBroke ? 'SPECTATE' : room.state);
+          // 只有 Host 能看到「手動結算」按鈕
           DOM.btnResolve.classList.toggle('hidden', !amHost);
           renderPlayerList('playerListBidding', players, amHost);
         }
 
-        // ── REVEAL ──
+        // ── REVEAL 狀態 ──
+        // 顯示結算結果：物品真實價值、得標者、出價金額、分數變動
         if (room.state === "REVEAL" && rr) {
           DOM.revealItemName.textContent = rr.itemName || "-";
           DOM.revealHiddenValue.textContent = String(rr.hiddenValue || "?");
           if (rr.winnerId) {
             DOM.revealWinner.textContent = rr.winnerName || rr.winnerId;
-            let det = `出價 ${rr.winnerBid}`;
-            if (rr.taxApplied) det += `（加稅後實付 ${rr.actualCost}）`;
+            // 組裝得標明細：出價、加稅後實付、分數變動、護盾效果
+            let det = `出價 Bid: ${rr.winnerBid}`;
+            if (rr.taxApplied) det += `（加稅後實付 After tax: ${rr.actualCost}）`;
             const d = rr.deltas && rr.deltas[rr.winnerId];
-            if (d) { const cls = d.delta >= 0 ? 'delta-positive' : 'delta-negative'; det += ` → 分數 <span class="${cls}">${d.delta >= 0 ? '+' : ''}${d.delta}</span>`; if (d.shieldApplied) det += ' 🛡️護盾生效！'; }
+            if (d) { const cls = d.delta >= 0 ? 'delta-positive' : 'delta-negative'; det += ` → 分數 Score <span class="${cls}">${d.delta >= 0 ? '+' : ''}${d.delta}</span>`; if (d.shieldApplied) det += ' 🛡️護盾生效 Shield!'; }
             DOM.revealDetail.innerHTML = det;
-          } else { DOM.revealWinner.textContent = "無人得標"; DOM.revealDetail.textContent = "所有人出價超過預算或無人出價"; }
+          } else { DOM.revealWinner.textContent = "無人得標 No Winner"; DOM.revealDetail.textContent = "所有人出價超過預算或無人出價 All bids exceeded budget or no bids"; }
+          // 顯示所有玩家的分數變動（只有得標者有 delta）
           let dh = ''; players.forEach(p => { const d = rr.deltas && rr.deltas[p.playerId]; if (d) { const c = d.delta >= 0 ? 'delta-positive' : 'delta-negative'; dh += `<div>${esc(p.name)}: <span class="${c}">${d.delta >= 0 ? '+' : ''}${d.delta}</span></div>`; } });
           DOM.revealDeltas.innerHTML = dh;
+          // 啟動 REVEAL 倒數（自動進入排行榜）
           if (room.revealUntilTs > 0 && !S.countdownInterval) startCountdown('revealCountdown', room.revealUntilTs);
         }
 
-        // ── POSTROUND ──
+        // ── POSTROUND 狀態 ──
+        // 顯示排行榜，Host 可手動開始下一回合，否則等倒數自動進入
         if (room.state === "POSTROUND") {
           renderLeaderboard('leaderboardBox', players);
           DOM.btnNextRound.classList.toggle('hidden', !amHost);
-          DOM.postAutoText.textContent = amHost ? "Host 可手動開始下一回合" : "自動進入下一回合…";
+          DOM.postAutoText.textContent = amHost ? "Host 可手動開始下一回合 Start next round manually" : "自動進入下一回合… Next round auto-starting…";
           if (room.postUntilTs > 0 && !S.countdownInterval) startCountdown('postCountdown', room.postUntilTs);
         }
 
-        // ── ENDED ──
+        // ── ENDED 狀態 ──
+        // 顯示最終排行榜，Host 可以重新開始遊戲 or 回到大廳
         if (room.state === "ENDED") { renderLeaderboard('leaderboardEndBox', players); DOM.btnRestart.classList.toggle('hidden', !amHost); }
 
-        // ── 事件增量 ──
+        // ── 事件增量處理 ──
+        // 更新 sinceEventId，下次 sync 只取新事件；同時寫入 debug log
         if (evts.length) {
           const mx = Math.max(...evts.map(e => e.eventId || 0));
           if (mx > S.sinceEventId) S.sinceEventId = mx;
           evts.forEach(ev => logMsg(`#${ev.eventId} ${ev.type} ${ev.playerId || ""} ${ev.payloadJson || ""}`));
         }
-        setStatus(true, "同步中… " + (stateLabel[room.state] || room.state));
+        setStatus(true, "同步中 Syncing… " + (stateLabel[room.state] || room.state));
       } finally { S.syncing = false; }
     }
 
     /* ══════════════════════════════════════════════════════════════════════════
      * 遊戲操作
+     * 這些函式都是玩家/Host 的主動操作，按下按鈕後觸發
+     * 全部透過 wire() 包裝 try/catch，錯誤會顯示在 UI 上
      * ════════════════════════════════════════════════════════════════════════ */
+
+    /** 玩家送出出價（同回合可多次出價，結算時取最後一次） */
     async function sendBid() {
       showErr('roomError', '');
       const bid = Number(DOM.bidInput.value);
-      if (!Number.isFinite(bid) || bid < 0) throw new Error("出價必須 ≥ 0");
+      if (!Number.isFinite(bid) || bid < 0) throw new Error("出價必須 ≥ 0 Bid must be ≥ 0");
       const round = Number(DOM.roomRoundText.textContent || 0);
       const o = await apiPOST("bid", { roomId: S.roomId, playerId: S.playerId, round, bid });
       if (!o.ok) throw new Error(o.error || "bid failed");
-      DOM.bidConfirmBox.classList.remove('hidden'); DOM.bidConfirmBox.textContent = `✅ 你已出價：${bid}`;
-      S.lastRenderHash = "";
+      DOM.bidConfirmBox.classList.remove('hidden'); DOM.bidConfirmBox.textContent = `✅ 你已出價 Bid placed：${bid}`;
+      S.lastRenderHash = "";  // 強制下次 sync 重繪
     }
 
+    /** Host 開始新回合（也用於 POSTROUND 的「下一回合」） */
     async function startRoundHost() {
       showErr('roomError', '');
       const o = await apiPOST("startRound", { roomId: S.roomId, hostToken: S.hostToken, playerId: S.playerId });
       if (!o.ok) throw new Error(o.error || "startRound failed");
-      S.lastRenderHash = "";
+      S.lastRenderHash = "";  // 強制重繪
     }
 
+    /** Host 手動結算當前回合（不等倒數） */
     async function resolveHost() {
       showErr('roomError', '');
       const o = await apiPOST("resolve", { roomId: S.roomId, hostToken: S.hostToken, playerId: S.playerId });
@@ -1077,64 +1239,107 @@
       S.lastRenderHash = "";
     }
 
+    /** Host 儲存房間設定（回合數、秒數、起始預算） */
     async function saveSettings() {
       showErr('roomError', '');
       const o = await apiPOST("updateSettings", { roomId: S.roomId, hostToken: S.hostToken, playerId: S.playerId, maxRounds: Number(DOM.setMaxRounds.value || 8), roundSeconds: Number(DOM.setRoundSeconds.value || 25), startingBudget: Number(DOM.setStartBudget.value || 100) });
       if (!o.ok) throw new Error(o.error || "updateSettings failed");
-      setStatus(true, '設定已儲存'); S.lastRenderHash = "";
+      setStatus(true, '設定已儲存 Settings saved'); S.lastRenderHash = "";
     }
 
+    /** Host 重置資料庫（清空所有房間/玩家/事件/卡牌，重新 seed items） */
     async function resetDb() {
       showErr('roomError', '');
-      if (!S.hostToken) throw new Error("只有房主可以重置");
-      if (!confirm("確定要重置所有資料嗎？")) return;
+      if (!S.hostToken) throw new Error("只有房主可以重置 Host only");
+      if (!confirm("確定要重置所有資料嗎？ Reset all data?")) return;
       const o = await apiPOST("resetDatabase", { roomId: S.roomId, hostToken: S.hostToken });
       if (!o.ok) throw new Error(o.error || "reset failed");
       showLobby(); S.roomId = ""; S.playerId = ""; S.hostToken = ""; S.sinceEventId = 0; S.lastRenderHash = "";
-      setStatus(true, '資料庫已重置');
+      setStatus(true, '資料庫已重置 DB reset');
     }
 
     /* ══════════════════════════════════════════════════════════════════════════
      * 按鈕綁定（統一 try/catch 包裝）
+     * wire() 會將按鈕 click 事件包裝在 try/catch 中，
+     * 錯誤自動顯示在對應的 error box（大廳或房間）
      * ════════════════════════════════════════════════════════════════════════ */
     function wire(id, fn) {
       DOM[id].onclick = async () => {
         try { await fn(); } catch (e) {
+          // 根據當前畫面決定錯誤訊息顯示位置（大廳 or 房間）
           const t = DOM.viewRoom.classList.contains('hidden') ? 'lobbyError' : 'roomError';
-          showErr(t, String(e.message || e)); setStatus(false, '操作失敗'); logMsg("ERR: " + String(e.message || e));
+          showErr(t, String(e.message || e)); setStatus(false, '操作失敗 Action failed'); logMsg("ERR: " + String(e.message || e));
         }
       };
     }
 
+    // ── 大廳按鈕 ──
     wire('btnRefresh', refreshLobby);
     wire('btnCreateRoom', createRoom);
     wire('btnJoinRoom', () => joinRoomById(DOM.joinRoomId.value));
+    // ── 房間內按鈕 ──
     wire('btnLeave', async () => {
-      showLobby(); setStatus(true, '回到大廳');
-      setTimeout(refreshLobby, 300);  // 離開後自動刷新房間列表
+      // 離開房間：通知後端，清除本地狀態，跳回大廳
+      try { await apiPOST("leaveRoom", { roomId: S.roomId, playerId: S.playerId }); } catch (_) { }
+      S.roomId = ""; S.playerId = ""; S.hostToken = ""; S.sinceEventId = 0; S.lastRenderHash = "";
+      showLobby(); setStatus(true, '回到大廳 Back to lobby');
+      setTimeout(refreshLobby, 300);
     });
     wire('btnBid', sendBid);
     wire('btnStartRound', startRoundHost);
     wire('btnResolve', resolveHost);
-    wire('btnNextRound', startRoundHost);   // 複用 startRound
+    wire('btnNextRound', startRoundHost);   // 複用 startRound（後端 nextRound 和 startRound 是同一個 API）
     wire('btnResetDb', resetDb);
     wire('btnSaveSettings', saveSettings);
+
+    // ── Shuffle 按鈕：重新隨機化物品價格 ──
+    wire('btnShuffleItems', async () => {
+      showErr('roomError', '');
+      // 讀取所選的波動度 radio 值（low/mid/high）
+      const vol = (document.querySelector('input[name="volatility"]:checked') || {}).value || 'mid';
+      // 做按鈕 loading 狀態
+      DOM.btnShuffleItems.disabled = true;
+      DOM.btnShuffleItems.textContent = '🎲 隨機中… Shuffling…';
+      try {
+        const o = await apiPOST("shuffleItems", { roomId: S.roomId, hostToken: S.hostToken, volatility: vol });
+        if (!o.ok) throw new Error(o.error || "shuffleItems failed");
+        // 顯示成功狀態，3 秒後自動隱藏
+        const ss = DOM.shuffleStatus;
+        ss.classList.remove('hidden');
+        ss.textContent = '✅ 金額已隨機化 Prices shuffled (' + vol.toUpperCase() + ')';
+        setTimeout(() => ss.classList.add('hidden'), 3000);
+        setStatus(true, '物品金額已更新 Item prices shuffled');
+      } finally {
+        DOM.btnShuffleItems.disabled = false;
+        DOM.btnShuffleItems.textContent = '🎲 隨機跳動金額 Shuffle Prices';
+      }
+    });
+
+    // ── 重新開始遊戲（不離開房間，重置所有玩家的 budget/score） ──
     wire('btnRestart', async () => {
-      // Host 重新開始遊戲（不離開房間）
       showErr('roomError', '');
       const o = await apiPOST("restartGame", { roomId: S.roomId, hostToken: S.hostToken, playerId: S.playerId });
       if (!o.ok) throw new Error(o.error || "restartGame failed");
-      S.lastRenderHash = ""; setStatus(true, '遊戲已重新開始');
+      S.lastRenderHash = ""; setStatus(true, '遊戲已重新開始 Game restarted');
     });
+    // ── 回到大廳（離開房間 + 清除狀態） ──
     wire('btnBackLobby', async () => {
-      showLobby(); setStatus(true, '回到大廳');
+      try { await apiPOST("leaveRoom", { roomId: S.roomId, playerId: S.playerId }); } catch (_) { }
+      S.roomId = ""; S.playerId = ""; S.hostToken = ""; S.sinceEventId = 0; S.lastRenderHash = "";
+      showLobby(); setStatus(true, '回到大廳 Back to lobby');
       setTimeout(refreshLobby, 300);
     });
-    wire('btnSetup', async () => { showErr('lobbyError', ''); setStatus(true, '初始化DB…'); const o = await apiPOST("setup", {}); if (!o.ok) throw new Error(o.error); setStatus(true, 'DB 初始化完成'); setTimeout(refreshLobby, 500); });
-    wire('btnDebug', async () => { showErr('lobbyError', ''); setStatus(true, '測試 API…'); const o = await apiGET("debugInfo", {}); if (!o.ok) throw new Error(o.error); setStatus(true, 'API OK ✓'); logMsg("DEBUG:\n" + JSON.stringify(o, null, 2)); });
 
+    // ── Admin 專用按鈕（僅在名稱為 admin 時顯示） ──
+    wire('btnSetup', async () => { showErr('lobbyError', ''); setStatus(true, '初始化DB Initializing…'); const o = await apiPOST("setup", {}); if (!o.ok) throw new Error(o.error); setStatus(true, 'DB 初始化完成 DB initialized'); setTimeout(refreshLobby, 500); });
+    wire('btnDebug', async () => { showErr('lobbyError', ''); setStatus(true, '測試 API Testing…'); const o = await apiGET("debugInfo", {}); if (!o.ok) throw new Error(o.error); setStatus(true, 'API OK ✓'); logMsg("DEBUG:\n" + JSON.stringify(o, null, 2)); });
+
+    // ── UI 折疊互動 ──
     // Debug log 折疊
     DOM.debugToggle.onclick = () => { DOM.debugLog.classList.toggle('hidden'); DOM.debugToggle.textContent = DOM.debugLog.classList.contains('hidden') ? '▶ Debug Log' : '▼ Debug Log'; };
+
+    // 遊戲說明折疊箭頭
+    $('rulesDetails').addEventListener('toggle', function () { $('rulesArrow').textContent = this.open ? '▼' : '▶'; });
 
     /* ══════════════════════════════════════════════════════════════════════════
      * 初始化
