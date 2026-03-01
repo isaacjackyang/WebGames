@@ -1584,6 +1584,7 @@ function apiBid_(p) {
     if (Number(r[rim.round] || 0) !== round)
       return { ok: false, error: "ROUND_MISMATCH" };
 
+
     // 驗證預算 & 收集活躍玩家（合併迴圈以提升效率）
     // Step A: 收集房間內所有 budget > 0 的玩家 ID，同時驗證當前玩家是否有資格
     const players = ss.getSheetByName(TABS.PLAYERS);
@@ -1612,11 +1613,13 @@ function apiBid_(p) {
     if (!foundMe) return { ok: false, error: "PLAYER_NOT_FOUND" };
     if (myBudget <= 0) return { ok: false, error: "ZERO_BUDGET" };
 
+
     // Step B: 掃描本回合所有 BID 事件，建立已出價玩家的 Set
     const events = ss.getSheetByName(TABS.EVENTS);
     const eAll = readAll_(events);
     const eim  = idxMap_(eAll.headers);
     const biddedSet = new Set();  // 本回合已出價的 playerId 集合
+
     // 預先產生 round 的搜尋字串，避免對舊事件進行 JSON.parse
     // JSON 中 round 通常為 "round":N 或 "round": N
     const roundStr = `"round":${round}`; 
@@ -1631,6 +1634,7 @@ function apiBid_(p) {
 
       try {
         const pl = JSON.parse(payload);
+
         if (Number(pl.round) === round) biddedSet.add(String(ev[eim.playerId]));
       } catch (_) {}
     });

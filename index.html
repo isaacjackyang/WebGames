@@ -982,10 +982,12 @@
       rooms.forEach(r => {
         const tr = document.createElement("tr");
         tr.innerHTML = `<td style="font-family:monospace;font-weight:700">${r.roomId}</td><td style="font-size:12px">${esc(r.lobbyCode || '')}</td><td style="font-size:12px">${stateLabel[r.state] || r.state}</td><td>${r.playerCount || 0}</td><td>${r.round || 0}/${r.maxRounds || 0}</td><td><button class="small secondary">加入 Join</button></td>`;
+
         tr.querySelector("button").onclick = async () => {
           try { await joinRoomById(r.roomId); }
           catch (e) { showErr('lobbyError', String(e.message || e)); }
         };
+
         tb.appendChild(tr);
       });
     }
@@ -1032,8 +1034,10 @@
     /** 以 roomId 加入房間 */
     async function joinRoomById(roomId) {
       showErr('lobbyError', '');
+
       const name = (DOM.playerName.value || "").trim();
       if (!name) throw new Error("請輸入名稱再按加入 Please enter name before joining");
+
       roomId = must(roomId, 'roomId').trim();
       setStatus(true, '加入房間 Joining room…');
       const jr = await apiPOST("joinRoom", { roomId, name });
@@ -1409,9 +1413,11 @@
     DOM.debugToggle.onclick = () => { DOM.debugLog.classList.toggle('hidden'); DOM.debugToggle.textContent = DOM.debugLog.classList.contains('hidden') ? '▶ Debug Log' : '▼ Debug Log'; };
 
     // 遊戲說明折疊箭頭
+
     // 遊戲說明折疊箭頭（大廳 & 房間）
     $('rulesDetails').addEventListener('toggle', function () { $('rulesArrow').textContent = this.open ? '▼' : '▶'; });
     $('lobbyRulesDetails').addEventListener('toggle', function () { $('lobbyRulesArrow').textContent = this.open ? '▼' : '▶'; });
+
 
     /* ══════════════════════════════════════════════════════════════════════════
      * 初始化
